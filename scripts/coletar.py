@@ -217,8 +217,8 @@ def ler_feed(url, fonte, padrao):
             m = re.search(r"/(20\d\d)/(\d\d)/(\d\d)/", link)
             if m and m.group(0) != time.strftime("/%Y/%m/%d/"):
                 ts = int(datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)), 15, tzinfo=timezone.utc).timestamp() * 1000)
-        if not titulo or not link.startswith("http"):
-            continue
+        if not titulo or not link.startswith("http") or re.search(r"globoesporte\.com\s*$", titulo):
+            continue  # páginas de "ao vivo" do ge vêm sem foto e com título de sistema
         cat = classificar(titulo, desc, padrao)
         if not cat:
             continue
@@ -273,7 +273,7 @@ def main():
     vistos, itens = set(), []
     for i in sorted(todos.values(), key=lambda x: (x["img"] is None, -x["ts"])):
         k = chave_titulo(i["t"])
-        if i["ts"] < limite or k in vistos or classificar(i["t"], i.get("d", ""), i["cat"]) is None:
+        if i["ts"] < limite or k in vistos or i["t"].rstrip().endswith("globoesporte.com") or classificar(i["t"], i.get("d", ""), i["cat"]) is None:
             continue
         i["ts"] = min(i["ts"], agora)
         vistos.add(k)

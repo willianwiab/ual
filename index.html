@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ual</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23111'/%3E%3Ctext x='32' y='44' font-family='Arial Black,Arial' font-weight='900' font-size='30' fill='%23fff' text-anchor='middle'%3EU%3C/text%3E%3Ccircle cx='50' cy='42' r='5' fill='%23E0201B'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+/* Portal de fundo branco e letra preta: manchete grande no topo, depois blocos por editoria
+   (foto + manchete em negrito, linhas relacionadas com marcador), separados por faixas cinza. */
+:root{
+  --bg:#FFFFFF; --band:#EEEEEE; --ink:#111111; --muted:#666666; --line:#E2E2E2;
+  --dot:#E0201B;
+  --c-corinthians:#111111; --c-esportes:#0E8A4F; --c-saude:#C8325E; --c-tecnologia:#1E62D6; --c-ia:#7A3FE0;
+  --c-ciencia:#3F4FD1; --c-games:#E07A10; --c-pop:#D1338F; --c-clima:#0A8BAE; --c-obituario:#4B5568;
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --body:"Source Sans 3","Helvetica Neue",Arial,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--band)}
+body{color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.35;-webkit-text-size-adjust:100%}
+a{color:inherit;text-decoration:none}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--dot);outline-offset:2px}
+.col{max-width:1080px;margin:0 auto}
+.pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+.top{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+.bar{display:flex;align-items:center;gap:12px;padding-block:10px 4px}
+.logo{font-family:var(--display);font-weight:900;font-size:32px;letter-spacing:-.05em;line-height:1;cursor:pointer}
+.logo i{font-style:normal;color:var(--dot)}
+.date{margin-left:auto;font-size:13px;color:var(--muted);text-transform:capitalize;text-align:right}
+.search{border:0;background:none;padding:6px;cursor:pointer;color:var(--ink);display:grid;place-items:center}
+.sbox{display:none;padding-bottom:10px}
+.sbox.open{display:block}
+.sbox input{width:100%;font:inherit;padding:10px 12px;border-radius:8px;border:1.5px solid var(--line);background:var(--bg)}
+.nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin-inline:-6px}
+.nav::-webkit-scrollbar{display:none}
+.nav button{flex:none;font:700 13px var(--display);text-transform:uppercase;letter-spacing:.03em;padding:9px 8px 8px;border:0;border-bottom:3px solid transparent;background:none;color:var(--muted);cursor:pointer}
+.nav button[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--dot)}
+
+main{display:flex;flex-direction:column;gap:12px;padding-block:12px 32px}
+#home{display:flex;flex-direction:column;gap:12px}
+.block{background:var(--bg);padding-block:18px 16px;display:flex;flex-direction:column;gap:14px}
+.ed{font:800 12px var(--display);text-transform:uppercase;letter-spacing:.06em;color:var(--c);display:flex;align-items:center;gap:8px}
+.ed::before{content:"";width:4px;height:14px;background:var(--c)}
+.ed button{all:unset;cursor:pointer}
+
+/* Foto: imagem real da matéria; se falhar, cai na ilustração da editoria */
+.thumb{position:relative;aspect-ratio:16/10;border-radius:6px;overflow:hidden;background:var(--c)}
+.thumb img,.thumb canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.thumb .tag{position:absolute;left:8px;bottom:8px;font:800 10px var(--display);text-transform:uppercase;letter-spacing:.06em;background:var(--c);color:#fff;padding:3px 6px;border-radius:3px}
+
+/* Manchete principal */
+.hero{background:var(--bg);padding-block:16px}
+.hero a{display:grid;gap:12px}
+.hero .thumb{aspect-ratio:16/9}
+.hero h1{font-family:var(--display);font-weight:800;font-size:clamp(24px,5.4vw,40px);line-height:1.08;letter-spacing:-.02em;margin:0;text-wrap:balance}
+.hero p{margin:0;color:#333;font-size:17px}
+.side{display:grid;gap:14px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.side a{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;align-items:start}
+.side .thumb{aspect-ratio:4/3}
+.side h3{font-family:var(--display);font-weight:700;font-size:17px;line-height:1.2;margin:0}
+
+.lead{display:grid;grid-template-columns:minmax(0,42%) minmax(0,1fr);gap:16px;align-items:start}
+.lead h2{font-family:var(--display);font-weight:700;font-size:clamp(19px,4.4vw,25px);line-height:1.18;margin:0;letter-spacing:-.01em;text-wrap:pretty}
+.lead p{margin:6px 0 0;color:#444;font-size:15px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.meta{font-size:12px;color:var(--muted);margin-top:6px}
+ul.rel{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+ul.rel li a{display:grid;grid-template-columns:10px minmax(0,1fr);gap:12px;align-items:start}
+ul.rel li a::before{content:"";width:6px;height:6px;background:var(--dot);margin-top:.55em}
+ul.rel .t{font-size:clamp(16px,4.1vw,18px);line-height:1.35}
+ul.rel .meta{margin-top:2px}
+a:hover h1,a:hover h2,a:hover h3,a:hover .t{text-decoration:underline;text-underline-offset:3px}
+.read h1,.read h2,.read h3,.read .t{color:#7a7a7a}
+.more{align-self:flex-start;font:700 14px var(--body);color:var(--ink);background:none;border:1.5px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer}
+
+/* Lista de uma editoria: grade de cartões */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px 16px}
+.card{display:flex;flex-direction:column;gap:8px}
+.card h3{font-family:var(--display);font-weight:700;font-size:18px;line-height:1.2;margin:0}
+
+@media (min-width:860px){
+  .hero{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px}
+  .side{margin-top:0;padding-top:0;border-top:0;align-content:start}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .row2 .block{height:100%}
+}
+
+.empty{background:var(--bg);padding:24px 16px;color:var(--muted)}
+.empty strong{display:block;color:var(--ink);font-family:var(--display);font-size:20px;margin-bottom:4px}
+details.filters{background:var(--bg);padding-block:16px;color:var(--muted);font-size:15px}
+details.filters summary{cursor:pointer;color:var(--ink);font-weight:600}
+.fx{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.fx input{flex:1 1 200px;min-width:0;font:inherit;padding:10px 12px;border-radius:8px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink)}
+.fx button{font:700 15px var(--body);border:0;border-radius:8px;padding:10px 16px;background:var(--ink);color:var(--bg);cursor:pointer}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{display:flex;align-items:center;background:var(--band);color:var(--ink);border-radius:999px;padding:3px 3px 3px 12px;font-size:14px}
+.chip button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:17px;padding:0 9px}
+footer{font-size:13px;color:var(--muted);padding-block:6px 24px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="col pad">
+    <div class="bar">
+      <div class="logo" id="logo" role="link" tabindex="0" aria-label="Voltar à capa">Ual<i>.</i></div>
+      <div class="date" id="date"></div>
+      <button class="search" id="sbtn" type="button" aria-label="Buscar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      </button>
+    </div>
+    <div class="sbox" id="sbox"><input id="q" type="search" placeholder="Buscar nas notícias de hoje" autocomplete="off"></div>
+    <nav class="nav" id="nav" aria-label="Editorias"></nav>
+  </div>
+</header>
+
+<main class="col" id="main">
+  <div class="empty pad" id="status"><strong>Abrindo a capa…</strong>Corinthians, esporte, saúde, tecnologia, IA, ciência, games, cultura pop, clima e obituário. Sem política.</div>
+  <div id="home"></div>
+  <details class="filters pad">
+    <summary>Esconder mais assuntos</summary>
+    <p>Toda manchete com estas palavras some da capa. Fica salvo só neste aparelho.</p>
+    <form class="fx" id="fx">
+      <input id="kw" placeholder="ex.: celebridade, Mega-Sena" autocomplete="off">
+      <button type="submit">Esconder</button>
+    </form>
+    <div class="tags" id="tags"></div>
+  </details>
+  <footer class="pad" id="foot">Toque numa manchete para ler a matéria no site original.</footer>
+</main>
+
+<script>
+const CATS=[
+  {id:"capa",label:"Capa"},
+  {id:"corinthians",label:"Corinthians"},
+  {id:"esportes",label:"Esporte"},
+  {id:"saude",label:"Saúde"},
+  {id:"tecnologia",label:"Tecnologia"},
+  {id:"ia",label:"IA"},
+  {id:"ciencia",label:"Ciência"},
+  {id:"games",label:"Games"},
+  {id:"pop",label:"Pop"},
+  {id:"clima",label:"Clima"},
+  {id:"obituario",label:"Obituário"},
+];
+const LABEL=Object.fromEntries(CATS.map(c=>[c.id,c.label]));
+// Rede de segurança: o coletor já tira política, isto pega o que escapar.
+const POLITICA=["lula","bolsonaro","trump","stf","congresso","senado","deputad","ministro","ministra","eleição","eleições","eleitoral","partido","governo federal","planalto","impeachment","cpi","prefeito","governador","política","político","golpe","anistia"];
+const ls={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+let view=(location.hash.slice(1)||"capa"), readSet=new Set(ls.get("read",[])), blocked=ls.get("blocked",[]), items=[], query="";
+if(!LABEL[view])view="capa";
+const $=s=>document.querySelector(s);
+$("#date").textContent=new Date().toLocaleDateString("pt-BR",{weekday:"short",day:"numeric",month:"short"});
+
+const norm=s=>" "+s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"")+" ";
+const bad=t=>{const s=norm(t);return POLITICA.some(w=>s.includes(norm(w).trim()))||blocked.some(w=>s.includes(norm(w).trim()))};
+const ok=()=>items.filter(i=>!bad(i.t)&&(!query||norm(i.t+" "+(i.d||"")).includes(norm(query).trim())));
+function ago(ts){const m=Math.round((Date.now()-ts)/60000);if(m<60)return `há ${Math.max(m,1)} min`;const h=Math.round(m/60);if(h<24)return `há ${h} h`;return new Date(ts).toLocaleDateString("pt-BR",{day:"numeric",month:"short"})}
+function hash(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+
+// Ilustração de reserva, desenhada quando a foto não carrega
+function paint(cv,cat,seed){
+  const r=cv.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);
+  const w=Math.max(1,Math.round(r.width*dpr)),h=Math.max(1,Math.round(r.height*dpr));
+  cv.width=w;cv.height=h;const g=cv.getContext("2d");
+  let s=seed||1;const rnd=()=>{s=Math.imul(s^(s>>>15),2246822507)>>>0;s^=s>>>13;return (s%10000)/10000};
+  g.fillStyle=css("--c-"+cat)||"#111";g.fillRect(0,0,w,h);
+  const gr=g.createLinearGradient(0,0,w,h);gr.addColorStop(0,"rgba(255,255,255,.16)");gr.addColorStop(1,"rgba(0,0,0,.28)");g.fillStyle=gr;g.fillRect(0,0,w,h);
+  g.lineWidth=Math.max(2,w/140);
+  if(cat==="corinthians"||cat==="esportes"){
+    g.strokeStyle="rgba(255,255,255,.4)";g.strokeRect(w*.06,h*.1,w*.88,h*.8);g.beginPath();g.moveTo(w/2,h*.1);g.lineTo(w/2,h*.9);g.stroke();
+    g.beginPath();g.arc(w/2,h/2,h*.18,0,7);g.stroke();
+    g.fillStyle="#fff";g.beginPath();g.arc(w*(.25+rnd()*.5),h*(.25+rnd()*.5),h*.07,0,7);g.fill();
+  }else if(cat==="saude"){
+    g.strokeStyle="rgba(255,255,255,.8)";g.lineWidth=Math.max(3,w/80);g.beginPath();const y=h*(.45+rnd()*.1);g.moveTo(0,y);let x=0;
+    while(x<w){x+=w*(.08+rnd()*.06);g.lineTo(x,y);g.lineTo(x+w*.02,y-h*(.15+rnd()*.25));g.lineTo(x+w*.04,y+h*(.1+rnd()*.15));g.lineTo(x+w*.06,y);x+=w*.06}g.stroke();
+  }else if(cat==="tecnologia"||cat==="ia"){
+    g.strokeStyle="rgba(255,255,255,.45)";g.fillStyle="rgba(255,255,255,.8)";
+    for(let k=0;k<9;k++){let x=rnd()*w,y=rnd()*h;g.beginPath();g.moveTo(x,y);for(let j=0;j<3;j++){if(rnd()<.5)x+=(rnd()-.5)*w*.5;else y+=(rnd()-.5)*h*.6;g.lineTo(x,y)}g.stroke();g.beginPath();g.arc(x,y,Math.max(3,w/70),0,7);g.fill()}
+  }else if(cat==="ciencia"){
+    for(let k=0;k<60;k++){g.fillStyle=`rgba(255,255,255,${.3+rnd()*.7})`;g.beginPath();g.arc(rnd()*w,rnd()*h,rnd()*w/200+1,0,7);g.fill()}
+    const px=w*(.55+rnd()*.3),py=h*(.3+rnd()*.4),pr=h*.22;g.fillStyle="rgba(255,255,255,.88)";g.beginPath();g.arc(px,py,pr,0,7);g.fill();
+  }else if(cat==="clima"){
+    g.fillStyle="rgba(255,230,140,.9)";g.beginPath();g.arc(w*.25,h*.35,h*.2,0,7);g.fill();
+    g.fillStyle="rgba(255,255,255,.9)";const cx=w*.5,cy=h*.42;
+    [[0,0,.16],[.12,-.06,.2],[.27,0,.15]].forEach(([dx,dy,r])=>{g.beginPath();g.arc(cx+dx*w,cy+dy*h,r*h,0,7);g.fill()});
+  }else if(cat==="obituario"){
+    g.fillStyle="rgba(0,0,0,.2)";g.fillRect(0,0,w,h);const x=w*.5,top=h*.42;g.fillStyle="rgba(255,255,255,.85)";g.fillRect(x-w*.035,top,w*.07,h*.42);
+    g.fillStyle="rgba(255,244,210,1)";g.beginPath();g.ellipse(x,top-h*.07,w*.014,h*.065,0,0,7);g.fill();
+  }else{
+    const n=10,cw=w/n;for(let k=0;k<26;k++){g.fillStyle=`rgba(255,255,255,${.12+rnd()*.5})`;g.fillRect(Math.floor(rnd()*n)*cw,Math.floor(rnd()*(h/cw))*cw,cw-2,cw-2)}
+  }
+}
+function thumb(i,{tag=false,eager=false}={}){
+  const d=el("div","thumb");d.style.setProperty("--c",`var(--c-${i.cat})`);
+  const fallback=()=>{d.querySelector("img")?.remove();const cv=el("canvas");cv.setAttribute("aria-hidden","true");d.prepend(cv);requestAnimationFrame(()=>paint(cv,i.cat,hash(i.id)))};
+  if(i.img){
+    const im=el("img");im.alt="";im.decoding="async";im.loading=eager?"eager":"lazy";im.referrerPolicy="no-referrer";
+    im.onerror=fallback;im.src=i.img;d.appendChild(im);
+  }else fallback();
+  if(tag)d.appendChild(el("span","tag",LABEL[i.cat]));
+  return d;
+}
+function link(i){
+  const a=el("a");a.href=i.u;a.target="_blank";a.rel="noopener noreferrer";
+  if(readSet.has(i.id))a.classList.add("read");
+  a.addEventListener("click",()=>{readSet.add(i.id);ls.set("read",[...readSet].slice(-800));a.classList.add("read")});
+  return a;
+}
+const meta=i=>el("div","meta",`${i.src} · ${ago(i.ts)}`);
+function go(id){view=id;history.replaceState(null,"",id==="capa"?location.pathname:"#"+id);render();scrollTo({top:0})}
+
+// Manchete principal + 3 destaques ao lado (um de cada editoria)
+function hero(all){
+  const picks=[],used=new Set();
+  const order=["corinthians","ciencia","saude","esportes","tecnologia","ia","pop","games","clima"];
+  for(const c of order){const i=all.find(x=>x.cat===c&&x.img&&!used.has(x.id));if(i){picks.push(i);used.add(i.id)}if(picks.length===4)break}
+  if(!picks.length)return null;
+  const s=el("section","hero pad");
+  const [top,...rest]=picks;
+  const a=link(top);a.style.setProperty("--c",`var(--c-${top.cat})`);
+  a.appendChild(thumb(top,{tag:true,eager:true}));a.appendChild(el("h1",null,top.t));
+  if(top.d)a.appendChild(el("p",null,top.d));a.appendChild(meta(top));
+  s.appendChild(a);
+  const side=el("div","side");
+  rest.forEach(i=>{const x=link(i);x.appendChild(thumb(i,{eager:true}));const t=el("div");t.style.minWidth="0";t.appendChild(el("h3",null,i.t));t.appendChild(meta(i));x.appendChild(t);side.appendChild(x)});
+  s.appendChild(side);
+  return {node:s,used};
+}
+
+// Bloco de editoria: manchete com foto + linhas relacionadas
+function block(list,{label,cat,max=4,showMore=false}){
+  const b=el("section","block pad");b.style.setProperty("--c",`var(--c-${cat})`);
+  const e=el("div","ed");const btn=el("button",null,label);btn.type="button";btn.onclick=()=>go(cat);e.appendChild(btn);b.appendChild(e);
+  const [lead,...rest]=list;
+  const a=link(lead);a.classList.add("lead");
+  a.appendChild(thumb(lead));
+  const tx=el("div");tx.style.minWidth="0";tx.appendChild(el("h2",null,lead.t));if(lead.d)tx.appendChild(el("p",null,lead.d));tx.appendChild(meta(lead));a.appendChild(tx);
+  b.appendChild(a);
+  const shown=rest.slice(0,max-1);
+  if(shown.length){
+    const ul=el("ul","rel");
+    shown.forEach(i=>{const li=el("li");const x=link(i);const t=el("div");t.style.minWidth="0";t.appendChild(el("span","t",i.t));t.appendChild(meta(i));x.appendChild(t);li.appendChild(x);ul.appendChild(li)});
+    b.appendChild(ul);
+  }
+  if(showMore&&list.length>max){const m=el("button","more",`Mais de ${label} (${list.length}) ›`);m.type="button";m.onclick=()=>go(cat);b.appendChild(m)}
+  return b;
+}
+function grid(list,label,cat){
+  const b=el("section","block pad");b.style.setProperty("--c",`var(--c-${cat||"corinthians"})`);
+  const e=el("div","ed",label);b.appendChild(e);
+  const g=el("div","grid");
+  list.forEach(i=>{const a=link(i);a.classList.add("card");a.style.setProperty("--c",`var(--c-${i.cat})`);a.appendChild(thumb(i,{tag:!cat}));a.appendChild(el("h3",null,i.t));a.appendChild(meta(i));g.appendChild(a)});
+  b.appendChild(g);return b;
+}
+
+function renderNav(){
+  const nav=$("#nav");nav.innerHTML="";
+  for(const c of CATS){const b=el("button",null,c.label);b.type="button";b.id="nav-"+c.id;b.setAttribute("aria-pressed",String(view===c.id));b.onclick=()=>go(c.id);nav.appendChild(b)}
+  $("#nav-"+view)?.scrollIntoView({block:"nearest",inline:"nearest"});
+}
+function emptyBox(t,s){const e=el("div","empty pad");e.appendChild(el("strong",null,t));e.append(s);return e}
+function renderHome(){
+  const home=$("#home");home.innerHTML="";
+  if(!items.length)return;
+  $("#status").hidden=true;
+  const all=ok();
+  if(query){
+    home.appendChild(all.length?grid(all.slice(0,60),`Busca: “${query}” (${all.length})`):emptyBox("Nada encontrado","Tente outra palavra."));
+    return;
+  }
+  if(view!=="capa"){
+    const list=all.filter(i=>i.cat===view);
+    home.appendChild(list.length?grid(list,LABEL[view],view):emptyBox("Nada nesta editoria agora","Volte mais tarde."));
+    return;
+  }
+  const h=hero(all);
+  if(h)home.appendChild(h.node);
+  const rest=all.filter(i=>!h||!h.used.has(i.id));
+  let pair=null;
+  for(const c of CATS.slice(1)){
+    const list=rest.filter(i=>i.cat===c.id);if(!list.length)continue;
+    const big=c.id==="corinthians"||c.id==="esportes";
+    const b=block(list,{label:c.label,cat:c.id,max:big?6:4,showMore:true});
+    if(big){home.appendChild(b);continue}
+    // editorias menores andam em dupla no computador
+    if(!pair){pair=el("div","row2");home.appendChild(pair)}
+    pair.appendChild(b);if(pair.children.length===2)pair=null;
+  }
+}
+function renderTags(){
+  const box=$("#tags");box.innerHTML="";
+  blocked.forEach((w,idx)=>{const s=el("span","chip");s.appendChild(el("span",null,w));const x=el("button",null,"×");x.type="button";x.setAttribute("aria-label","Mostrar de novo "+w);x.onclick=()=>{blocked.splice(idx,1);ls.set("blocked",blocked);render()};s.appendChild(x);box.appendChild(s)});
+}
+function render(){renderNav();renderHome();renderTags()}
+$("#fx").addEventListener("submit",e=>{e.preventDefault();const v=$("#kw").value.trim();if(v&&!blocked.includes(v)){blocked.push(v);ls.set("blocked",blocked)}$("#kw").value="";render()});
+$("#logo").addEventListener("click",()=>{query="";$("#q").value="";go("capa")});
+$("#logo").addEventListener("keydown",e=>{if(e.key==="Enter")$("#logo").click()});
+$("#sbtn").addEventListener("click",()=>{const b=$("#sbox");b.classList.toggle("open");if(b.classList.contains("open"))$("#q").focus();else{query="";$("#q").value="";renderHome()}});
+let qt;$("#q").addEventListener("input",e=>{clearTimeout(qt);qt=setTimeout(()=>{query=e.target.value.trim();renderHome()},200)});
+addEventListener("hashchange",()=>{const v=location.hash.slice(1)||"capa";if(LABEL[v]&&v!==view){view=v;render()}});
+render();
+
+async function load(){
+  try{
+    const r=await fetch("news.json?t="+Date.now(),{cache:"no-store"});
+    const d=await r.json();
+    items=d.items.filter(i=>i.t&&i.u&&i.ts&&i.cat).sort((a,b)=>b.ts-a.ts);
+    if(d.updatedAt)$("#foot").textContent=`Atualizado ${new Date(d.updatedAt).toLocaleString("pt-BR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}. Fontes: ge, g1, UOL, Agência Brasil, Olhar Digital, Tecnoblog, Canaltech, IGN, Veja Saúde, Drauzio Varella, Superinteressante, MetSul, BBC e Meu Timão. Toque numa manchete para ler no site original.`;
+    renderHome();
+  }catch(e){
+    if(!items.length){const st=$("#status");st.innerHTML="";st.appendChild(el("strong",null,"Não deu para abrir a capa"));st.append("Confira a conexão e tente de novo.")}
+  }
+}
+load();
+// voltou ao app depois de um tempo: busca a capa nova
+let hiddenAt=0;document.addEventListener("visibilitychange",()=>{if(document.hidden)hiddenAt=Date.now();else if(Date.now()-hiddenAt>30*60e3)load()});
+</script>
+</body>
+</html>

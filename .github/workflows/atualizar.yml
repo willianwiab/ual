@@ -1,0 +1,34 @@
+name: Atualizar notícias
+
+on:
+  schedule:
+    # 6h51 e 17h51 em São Paulo (UTC-3)
+    - cron: "51 9 * * *"
+    - cron: "51 20 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: atualizar
+  cancel-in-progress: false
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/coletar.py
+      - name: Salvar news.json
+        run: |
+          git config user.name "ual-robo"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add news.json
+          git diff --cached --quiet && echo "nada novo" && exit 0
+          git commit -m "Notícias $(TZ=America/Sao_Paulo date '+%Y-%m-%d %H:%M')"
+          git push

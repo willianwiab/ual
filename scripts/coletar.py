@@ -19,6 +19,7 @@ SAIDA = RAIZ / "news.json"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36"
 DIAS = 4          # quanto tempo uma notícia fica na capa
 MAX_POR_CAT = 40
+MAX_CAT = {"cinema": 80}
 
 # (url, nome da fonte, editoria padrão). None = decide pelas palavras do título.
 FEEDS = [
@@ -39,7 +40,13 @@ FEEDS = [
     ("https://olhardigital.com.br/feed/", "Olhar Digital", "tecnologia"),
     ("https://tecnoblog.net/feed/", "Tecnoblog", "tecnologia"),
     ("https://canaltech.com.br/rss/", "Canaltech", "tecnologia"),
+    ("https://g1.globo.com/rss/g1/pop-arte/cinema/", "g1", "cinema"),
     ("https://g1.globo.com/rss/g1/pop-arte/", "g1", "pop"),
+    ("https://cinepop.com.br/feed/", "Cinepop", "cinema"),
+    ("https://pipocamoderna.com.br/feed/", "Pipoca Moderna", "cinema"),
+    ("https://cinemacomrapadura.com.br/feed/", "Cinema com Rapadura", "cinema"),
+    ("https://observatoriodocinema.com.br/feed/", "Observatório do Cinema", "cinema"),
+    ("https://filmeb.com.br/rss.xml", "Filme B", "cinema"),
     ("https://www.metsul.com/feed/", "MetSul", "clima"),
     ("https://agenciabrasil.ebc.com.br/rss/geral/feed.xml", "Agência Brasil", None),
     ("https://www.bbc.com/portuguese/index.xml", "BBC Brasil", None),
@@ -60,7 +67,7 @@ RUIM = ["assassin*", "homicídio*", "estupr*", "tiroteio*", "baleado*", "a tiros
         "sequestr*", "assalt*", "roub*", "furt*", "tráfico", "facç*", "pres[oa]s?", "prisão", "polícia*",
         "policia*", "feminicídio*", "violênci*", "abus*", "golpista*", "fraude*", "corrupç*", "investiga*",
         "denúncia*", "denunci*", "acident*", "atropel*", "suicíd*", "brig*", "agress*", "racis*", "injúria*",
-        "bets?", "apostas?", "process[oa]*", "condenad*", "justiça", "bbb", "a fazenda", "fofoca*", "traição", "trai", "luto", "pena de morte",
+        "encontrad[oa]s? mort[oa]s?", "dívida*", "penhor*", "despejad*", "mort[oa] em casa", "bets?", "apostas?", "process[oa]*", "condenad*", "justiça", "bbb", "a fazenda", "fofoca*", "traição", "trai", "luto", "pena de morte",
         # propaganda disfarçada de notícia
         "descontos?", "ofertas?", "menor preço", "promoç*", "cupo*", "black friday", "mercado livre", "amazon",
         "preço arrasador", "somente hoje", "imperdível"]
@@ -83,6 +90,16 @@ SAUDE = ["saúde", "doenç*", "vacin*", "câncer", "médic*", "hospita*", "sus",
          "obesidade"]
 POP = ["podcasts?", "videocasts?", "ccxp", "netflix", "séries?", "filmes?", "cinema", "shows?", "turnê",
        "álbum", "festival", "marvel", "star wars", "animes?", "streaming", "disney", "hbo", "oscar", "grammy"]
+CINEMA = ["filmes?", "cinemas?", "cinematográfic*", "estreia*", "estrei[ao]u?", "bilheteria*", "trailer*",
+          "hollywood", "diretor*", "diretora*", "longa-metragem", "oscar", "festival de cannes", "cannes",
+          "veneza", "sundance", "marvel", "dc studios", "pixar", "sequência", "remake", "elenco",
+          "atores", "ator", "atriz", "atrizes", "protagoniz*", "personagem", "bastidores", "pôster"]
+# notícia "de gente": ator/atriz em destaque na página de Cinema
+ATORES = ["atores", "ator", "atriz", "atrizes", "astro", "estrela de", "elenco", "escalad[oa]s?", "protagoniz*",
+          "interpret*", "papel", "vive [a-z]", "viverá", "revela", "relembra", "desabafa", "diz que", "conta que",
+          "entrevista", "carreira", "descarta retorno", "volta ao papel", "aniversário", "homenage*"]
+SERIE = ["séries?", "temporadas?", "episódios?", "animes?", "minissérie", "novela", "reality", "netflix",
+         "hbo max", "apple tv", "prime video", "disney\\+", "paramount\\+", "globoplay", "showrunner"]
 CORINTHIANS = ["corinthians", "timão", "neo química", "yuri alberto", "memphis"]
 
 _RX = {}
@@ -107,6 +124,10 @@ def classificar(titulo, desc, padrao):
         return "corinthians"
     if padrao == "corinthians":
         return "corinthians"
+    if padrao == "cinema":
+        return "cinema"
+    if padrao in ("pop", None) and tem(titulo, CINEMA):
+        return "cinema"
     if tem(titulo, IA):
         return "ia"
     if padrao in ("tecnologia", None) and tem(titulo, ESPORTE):
@@ -225,6 +246,12 @@ def ler_feed(url, fonte, padrao):
         foto = foto_do_item(b) or foto_do_item(html.unescape(desc_raw))
         out.append({"id": hashlib.md5(link.encode()).hexdigest()[:12], "t": titulo, "u": link,
                     "d": desc[:220], "ts": ts, "sem_data": not ts, "cat": cat, "src": fonte, "img": foto})
+        # "Selma Blair quebra o silêncio…": título que abre com nome de gente também conta
+        gente = re.match(r"^(?:[‘'\"][^’'\"]+[’'\"]: )?[A-ZÀ-Ý][a-zà-ÿ]+(?: (?:de |da |do )?[A-ZÀ-Ý][a-zà-ÿ]+){1,2} [a-zà-ÿ]{3,}", titulo)
+        if cat in ("cinema", "obituario", "pop") and (tem(titulo, ATORES) or (cat == "cinema" and gente)):
+            out[-1]["ator"] = 1
+        if cat == "cinema" and tem(titulo, SERIE) and not tem(titulo, ["filmes?", "cinemas?", "bilheteria"]):
+            out[-1]["serie"] = 1
     print(f"  ✓ {fonte:15} {len(out):3}/{len(blocos):3}  {url}")
     return out
 
@@ -242,6 +269,45 @@ def og_image(url):
         if m and m.group(1).startswith("http"):
             return html.unescape(m.group(1))
     return None
+
+
+INGRESSO = "https://api-content.ingresso.com/v0"
+
+
+def filme(f):
+    """Resume um filme da Ingresso.com no que a página de Cinema usa."""
+    imgs = {i.get("type"): i.get("url") for i in f.get("images") or []}
+    trailer = next((t.get("url") for t in f.get("trailers") or [] if t.get("url")), None)
+    pd = f.get("premiereDate") or {}
+    return {"id": f.get("id"), "t": (f.get("title") or "").strip(), "orig": f.get("originalTitle"),
+            "data": (pd.get("localDate") or "")[:10] or None, "gen": f.get("genres") or [],
+            "poster": imgs.get("PosterPortrait"), "wide": imgs.get("PosterHorizontal") or f.get("imageFeatured"),
+            "trailer": trailer, "sin": re.sub(r"\s+", " ", f.get("synopsis") or "").strip()[:400],
+            "elenco": f.get("cast") or "", "dir": f.get("director") or "", "class": f.get("contentRating") or "",
+            "min": f.get("duration") or "", "pais": f.get("countryOrigin") or "",
+            "u": f.get("siteURL") or f"https://www.ingresso.com/filme/{f.get('urlKey')}",
+            "salas": f.get("countIsPlaying") or 0, "pre": bool(f.get("inPreSale")), "prio": f.get("priority") or 0}
+
+
+def coletar_cinema():
+    """Estreias e filmes em cartaz em São Paulo (cidade 1) pela Ingresso.com."""
+    nao_filme = re.compile(r"live viewing|world tour|\btour\b|ao vivo|concerto|show|ópera|ballet|balé", re.I)
+    def lista(caminho):
+        dados, _ = baixar(f"{INGRESSO}/{caminho}")
+        return [filme(f) for f in json.loads(dados).get("items", [])
+                if f.get("type", "Filme") == "Filme" and not nao_filme.search(f.get("title") or "")
+                and not set(f.get("genres") or []) & {"Show", "Concerto"}]
+    hoje = time.strftime("%Y-%m-%d")
+    limite = time.strftime("%Y-%m-%d", time.localtime(time.time() + 120 * 86400))
+    estreias = sorted((f for f in lista("templates/soon/1/partnership/home")
+                       if f["data"] and hoje <= f["data"] <= limite and f["poster"]),
+                      key=lambda f: (f["data"], -f["prio"]))
+    cartaz = sorted((f for f in lista("events/city/1/partnership/home") if f["poster"] and f["salas"]),
+                    key=lambda f: (-f["salas"], -f["prio"]))[:30]
+    for f in estreias + cartaz:
+        f.pop("prio", None)
+    print(f"cinema: {len(estreias)} estreias, {len(cartaz)} em cartaz")
+    return {"estreias": estreias, "cartaz": cartaz}
 
 
 def chave_titulo(t):
@@ -288,10 +354,16 @@ def main():
     itens.sort(key=lambda x: -x["ts"])
     por_cat, final = {}, []
     for i in itens:
-        if por_cat.get(i["cat"], 0) < MAX_POR_CAT:
+        if por_cat.get(i["cat"], 0) < MAX_CAT.get(i["cat"], MAX_POR_CAT):
             por_cat[i["cat"]] = por_cat.get(i["cat"], 0) + 1
             final.append(i)
     SAIDA.write_text(json.dumps({"updatedAt": agora, "items": final}, ensure_ascii=False, separators=(",", ":")))
+    try:
+        cine = coletar_cinema()
+        cine["updatedAt"] = agora
+        (RAIZ / "cinema.json").write_text(json.dumps(cine, ensure_ascii=False, separators=(",", ":")))
+    except Exception as e:  # se a Ingresso cair, fica a lista anterior
+        print(f"  ✗ cinema: {e}")
     print("por editoria:", json.dumps(por_cat, ensure_ascii=False))
     print(f"com foto: {sum(1 for i in final if i['img'])}/{len(final)}")
 

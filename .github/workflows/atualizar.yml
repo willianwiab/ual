@@ -2,9 +2,9 @@ name: Atualizar notícias
 
 on:
   schedule:
-    # 6h51 e 17h51 em São Paulo (UTC-3)
-    - cron: "51 9 * * *"
-    - cron: "51 20 * * *"
+    # A cada 3 horas, das 6h às 21h em São Paulo (UTC-3). O agendador do GitHub às vezes
+    # atrasa ou pula um horário; com vários horários, a capa nunca fica muito tempo parada.
+    - cron: "17 9,12,15,18,21,0 * * *"
   workflow_dispatch:
 
 permissions:

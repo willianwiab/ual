@@ -18,7 +18,7 @@
   --bg:#FFFFFF; --band:#EEEEEE; --ink:#111111; --muted:#666666; --line:#E2E2E2;
   --dot:#E0201B;
   --c-corinthians:#111111; --c-esportes:#0E8A4F; --c-saude:#C8325E; --c-tecnologia:#1E62D6; --c-ia:#7A3FE0;
-  --c-ciencia:#3F4FD1; --c-games:#E07A10; --c-pop:#D1338F; --c-cinema:#B8860B; --c-clima:#0A8BAE; --c-obituario:#4B5568; --c-podcasts:#0F766E;
+  --c-ciencia:#3F4FD1; --c-games:#E07A10; --c-pop:#D1338F; --c-cinema:#B8860B; --c-clima:#0A8BAE; --c-obituario:#4B5568; --c-podcasts:#0F766E; --c-igreja:#1B3A5C;
   --display:"Archivo","Helvetica Neue",Arial,sans-serif;
   --body:"Source Sans 3","Helvetica Neue",Arial,sans-serif;
   color-scheme:light;
@@ -210,6 +210,21 @@ table.tab{width:100%;border-collapse:collapse;font-size:14px}
 @media (min-width:860px){.timao-g{display:grid;grid-template-columns:1fr 1fr;gap:24px}}
 .timao-g{display:grid;gap:18px}
 .sub-ed{font:800 11px var(--display);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+/* Igreja */
+.evs{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(240px,78%);gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px}
+.ev{scroll-snap-align:start;display:flex;flex-direction:column;gap:6px;min-width:0}
+.ev .im{position:relative;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:var(--c-igreja)}
+.ev .im img{width:100%;height:100%;object-fit:cover;display:block}
+.ev .dt{position:absolute;left:8px;top:8px;background:#fff;color:#111;border-radius:6px;padding:4px 8px;text-align:center;font:800 11px/1.1 var(--display);text-transform:uppercase}
+.ev .dt big{display:block;font-size:20px}
+.ev h3{font-family:var(--display);font-weight:700;font-size:16px;line-height:1.2;margin:0}
+.ev small{font-size:13px;color:var(--muted)}
+.ev small .tg{color:var(--dot);font-weight:700}
+.links{display:flex;gap:8px;flex-wrap:wrap}
+.links a{font:700 14px var(--body);border:1.5px solid var(--line);border-radius:999px;padding:8px 14px}
+.links a:hover{border-color:var(--ink)}
+.cal{width:100%;height:520px;border:1px solid var(--line);border-radius:8px;background:#fff}
+@media (min-width:860px){.evs{grid-auto-columns:300px}}
 footer{font-size:13px;color:var(--muted);padding-block:6px 24px}
 </style>
 </head>
@@ -251,6 +266,7 @@ footer{font-size:13px;color:var(--muted);padding-block:6px 24px}
 const CATS=[
   {id:"capa",label:"Capa"},
   {id:"corinthians",label:"Corinthians"},
+  {id:"igreja",label:"Igreja"},
   {id:"esportes",label:"Esporte"},
   {id:"saude",label:"Saúde"},
   {id:"tecnologia",label:"Tecnologia"},
@@ -341,7 +357,7 @@ function meta(i){
   if(i.alt?.length)m.append(` · +${i.alt.length} ${i.alt.length>1?"fontes":"fonte"}`);
   const b=el("button","dots","⋯");b.type="button";b.setAttribute("aria-label","Opções desta notícia");
   b.onclick=e=>{e.preventDefault();e.stopPropagation();openOpts(i)};
-  m.appendChild(b);return m;
+  if(i.cat!=="igreja")m.appendChild(b);return m;
 }
 // Palavras que dá para esconder: nomes próprios ("Patrick Stewart") e palavras longas do título
 const MIUDAS=new Set("para pela pelo com sem sobre após antes entre como mais menos quando onde qual quem isso esse essa este esta seus suas será serão foram estão ainda também novo nova novos novas veja saiba confira pode podem deve devem fazer anos hoje ontem amanhã contra desde primeiro primeira melhor melhores".split(" "));
@@ -431,6 +447,7 @@ function renderHome(){
   if(view==="cinema"){renderCinema(home,all);return}
   if(view!=="capa"){
     const list=all.filter(i=>i.cat===view);
+    if(view==="igreja"){renderIgreja(home);return}
     if(view==="corinthians"){const t=timaoPanel();if(t)home.appendChild(t)}
     home.appendChild(list.length?grid(list,LABEL[view],view):emptyBox("Nada nesta editoria agora","Volte mais tarde."));
     return;
@@ -438,6 +455,7 @@ function renderHome(){
   const h=hero(all);
   if(h)home.appendChild(h.node);
   const rest=all.filter(i=>!h||!h.used.has(i.id));
+  const ig=igrejaBloco(true);if(ig)home.appendChild(ig); // próximos eventos da igreja logo abaixo da manchete
   let pair=null;
   for(const c of CATS.slice(1)){
     const list=rest.filter(i=>i.cat===c.id);if(!list.length)continue;
@@ -653,20 +671,70 @@ async function loadTempo(){
 }
 $("#wx").addEventListener("click",()=>{const o=$("#wxbox").classList.toggle("open");$("#wx").setAttribute("aria-expanded",String(o))});
 
+// ===== Igreja: Lugar do Encontro (igreja.json, do app InPeace) + agenda do Will =====
+let igreja=null;
+const SITE_IGREJA="https://lugardoencontro.inpeaceapp.com";
+const AGENDA_WILL="wenprodutora@gmail.com";
+function evCard(e){
+  const a=el("a","ev");a.href=e.u;a.target="_blank";a.rel="noopener noreferrer";
+  const im=el("div","im");if(e.img)im.appendChild(img(e.img));
+  const d=new Date(e.ini),dt=el("div","dt");dt.append(d.toLocaleDateString("pt-BR",{timeZone:"America/Sao_Paulo",month:"short"}).replace(".",""));dt.appendChild(el("big",null,d.toLocaleDateString("pt-BR",{timeZone:"America/Sao_Paulo",day:"numeric"})));im.appendChild(dt);
+  a.appendChild(im);a.appendChild(el("h3",null,e.t));
+  const sm=el("small",null,`${quando(e.ini)}${e.online?" · online":""}${e.gratis?" · gratuito":""}`);
+  if(e.vagas){sm.append(" · ");sm.appendChild(el("span","tg","últimas vagas"))}
+  a.appendChild(sm);return a;
+}
+function igrejaBloco(naCapa){
+  const ag=(igreja?.agenda||[]).filter(e=>new Date(e.fim||e.ini)>=Date.now());
+  const lista=naCapa?ag.filter(e=>new Date(e.ini)-Date.now()<21*864e5):ag;
+  if(!lista.length)return null;
+  const b=el("section","block pad");b.style.setProperty("--c","var(--c-igreja)");
+  const e=el("div","ed");const bt=el("button",null,naCapa?"Igreja · próximos eventos":"Agenda da igreja");bt.type="button";bt.onclick=()=>go("igreja");e.appendChild(bt);b.appendChild(e);
+  const r=el("div","evs");lista.forEach(x=>r.appendChild(evCard(x)));b.appendChild(r);
+  return b;
+}
+function renderIgreja(home){
+  const top=el("section","block pad");top.style.setProperty("--c","var(--c-igreja)");
+  top.appendChild(el("div","ed","Lugar do Encontro"));
+  const l=el("div","links");
+  [["▶ Culto ao vivo","/live"],["Eventos e cursos","/events"],["Mensagens","/videos"],["Podcast","https://open.spotify.com/show/6MeRvrfBm23I4WrwmCK7mV"],["Doação","/give"],["Bíblia","/bible"]].forEach(([t,u])=>{const a=el("a",null,t);a.href=u.startsWith("http")?u:SITE_IGREJA+u;a.target="_blank";a.rel="noopener noreferrer";l.appendChild(a)});
+  top.appendChild(l);home.appendChild(top);
+  const ag=igrejaBloco(false);
+  home.appendChild(ag||emptyBox("Sem eventos marcados","A agenda da igreja aparece aqui assim que tiver evento novo."));
+  // Agenda do Will: o Google só mostra os compromissos para quem estiver logado nessa conta
+  const w=el("section","block pad");w.style.setProperty("--c","var(--c-igreja)");
+  w.appendChild(el("div","ed","Agenda do Will"));
+  const fr=el("iframe","cal");fr.title="Agenda do Will";fr.loading="lazy";
+  fr.src=`https://calendar.google.com/calendar/embed?src=${encodeURIComponent(AGENDA_WILL)}&ctz=America%2FSao_Paulo&mode=AGENDA&showTitle=0&showPrint=0&showTabs=0&showCalendars=0&hl=pt_BR`;
+  w.appendChild(fr);
+  const n=el("div","mini","Só aparece para quem estiver logado no Google com essa conta. Se ficar em branco no celular, use o botão.");w.appendChild(n);
+  const ab=el("a","more","Abrir no Google Agenda ›");ab.href="https://calendar.google.com/calendar/r/agenda";ab.target="_blank";ab.rel="noopener";w.appendChild(ab);
+  home.appendChild(w);
+  // mensagens: cultos inteiros (título com "|") e cortes curtos
+  const vs=[],vistos=new Set();(igreja?.videos||[]).forEach(v=>{if(!vistos.has(v.t)){vistos.add(v.t);vs.push(v)}});
+  const asItem=v=>({id:v.u,t:v.t,u:v.u,img:v.img,ts:Date.parse(v.ts),cat:"igreja",src:"YouTube"});
+  const cultos=vs.filter(v=>v.t.includes("|")).map(asItem),cortes=vs.filter(v=>!v.t.includes("|")).map(asItem);
+  if(cultos.length)home.appendChild(grid(cultos.slice(0,9),"Cultos e pregações","igreja"));
+  if(cortes.length)home.appendChild(grid(cortes.slice(0,6),"Cortes","igreja"));
+}
+async function loadIgreja(){
+  try{const r=await fetch("igreja.json?t="+Date.now(),{cache:"no-store"});igreja=await r.json();if(view==="igreja"||view==="capa")renderHome()}catch{}
+}
+
 async function load(){
   try{
     const r=await fetch("news.json?t="+Date.now(),{cache:"no-store"});
     const d=await r.json();
     items=d.items.filter(i=>i.t&&i.u&&i.ts&&i.cat).sort((a,b)=>b.ts-a.ts);
-    if(d.updatedAt)$("#foot").textContent=`Atualizado ${new Date(d.updatedAt).toLocaleString("pt-BR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}. Fontes: ge, g1, UOL, Agência Brasil, Olhar Digital, Canaltech, IGN, Veja Saúde, Drauzio Varella, Superinteressante, MetSul, BBC, Meu Timão, Cinepop, Pipoca Moderna, Observatório do Cinema, Filme B, Castnews, Google Notícias (eventos), Ingresso.com, ESPN (jogos e tabela) e Open-Meteo (tempo). Toque numa manchete para ler no site original.`;
+    if(d.updatedAt)$("#foot").textContent=`Atualizado ${new Date(d.updatedAt).toLocaleString("pt-BR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}. Fontes: ge, g1, UOL, Agência Brasil, Olhar Digital, Canaltech, IGN, Veja Saúde, Drauzio Varella, Superinteressante, MetSul, BBC, Meu Timão, Cinepop, Pipoca Moderna, Observatório do Cinema, Filme B, Castnews, Google Notícias (eventos), Ingresso.com, ESPN (jogos e tabela), app da Lugar do Encontro e Open-Meteo (tempo). Toque numa manchete para ler no site original.`;
     renderHome();
   }catch(e){
     if(!items.length){const st=$("#status");st.innerHTML="";st.appendChild(el("strong",null,"Não deu para abrir a capa"));st.append("Confira a conexão e tente de novo.")}
   }
 }
-load();loadCinema();loadTimao();loadTempo();
+load();loadCinema();loadTimao();loadTempo();loadIgreja();
 // voltou ao app depois de um tempo: busca a capa nova
-let hiddenAt=0;document.addEventListener("visibilitychange",()=>{if(document.hidden)hiddenAt=Date.now();else if(Date.now()-hiddenAt>30*60e3){load();loadCinema();loadTimao();loadTempo()}});
+let hiddenAt=0;document.addEventListener("visibilitychange",()=>{if(document.hidden)hiddenAt=Date.now();else if(Date.now()-hiddenAt>30*60e3){load();loadCinema();loadTimao();loadTempo();loadIgreja()}});
 </script>
 </body>
 </html>

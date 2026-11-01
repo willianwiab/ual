@@ -397,6 +397,27 @@ def coletar_timao():
     return {"proximos": proximos, "ultimos": ultimos, "tabela": tabela}
 
 
+INPEACE = "https://admin.inpeaceapp.com"
+IGREJA_SITE = "https://lugardoencontro.inpeaceapp.com"
+
+
+def coletar_igreja():
+    """Agenda e mensagens da Lugar do Encontro (app InPeace, dados públicos)."""
+    ev = json.loads(baixar(f"{INPEACE}/bff/events/pub/churches/ebbb8dd1-3d61-11ef-9c2d-02a781b073cb")[0]).get("data", [])
+    agenda = [{"id": e["id"], "t": e["name"].strip(), "ini": e["startDate"], "fim": e.get("endDate"),
+               "img": (e.get("image") or {}).get("url"), "pago": "paid" in (e.get("categories") or []),
+               "gratis": "free" in (e.get("categories") or []), "online": e.get("modality") == "online",
+               "vagas": "few-vacancies" in (e.get("categories") or []), "u": f"{IGREJA_SITE}/events/{e['id']}"}
+              for e in ev]
+    agenda.sort(key=lambda e: e["ini"])
+    vd = json.loads(baixar(f"{INPEACE}/api/v1/video/avsantoandre")[0]).get("items", [])
+    videos = [{"t": v["snippet"]["title"].strip(), "ts": v["snippet"]["publishedAt"], "img": v["snippet"].get("image"),
+               "u": f"https://www.youtube.com/watch?v={v['contentDetails']['videoId']}"}
+              for v in vd if (v.get("status") or {}).get("privacyStatus", "public") == "public"][:24]
+    print(f"igreja: {len(agenda)} eventos, {len(videos)} mensagens")
+    return {"agenda": agenda, "videos": videos}
+
+
 def main():
     antigos = {}
     if SAIDA.exists():
@@ -462,6 +483,12 @@ def main():
         (RAIZ / "time.json").write_text(json.dumps(timao, ensure_ascii=False, separators=(",", ":")))
     except Exception as e:  # se a ESPN cair, fica o placar anterior
         print(f"  ✗ corinthians: {e}")
+    try:
+        ig = coletar_igreja()
+        ig["updatedAt"] = agora
+        (RAIZ / "igreja.json").write_text(json.dumps(ig, ensure_ascii=False, separators=(",", ":")))
+    except Exception as e:  # se o app da igreja cair, fica a agenda anterior
+        print(f"  ✗ igreja: {e}")
     print(f"notícias juntadas: {sum(len(i.get('alt', [])) for i in final)}")
     print("por editoria:", json.dumps(por_cat, ensure_ascii=False))
     print(f"com foto: {sum(1 for i in final if i['img'])}/{len(final)}")

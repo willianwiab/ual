@@ -24,11 +24,11 @@ jobs:
         with:
           python-version: "3.12"
       - run: python scripts/coletar.py
-      - name: Salvar news.json e cinema.json
+      - name: Salvar news.json, cinema.json e time.json
         run: |
           git config user.name "ual-robo"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add news.json cinema.json
+          git add news.json cinema.json time.json
           git diff --cached --quiet && echo "nada novo" && exit 0
           git commit -m "Notícias $(TZ=America/Sao_Paulo date '+%Y-%m-%d %H:%M')"
           git push

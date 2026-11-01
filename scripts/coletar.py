@@ -48,13 +48,16 @@ FEEDS = [
     ("https://observatoriodocinema.com.br/feed/", "Observatório do Cinema", "cinema"),
     ("https://filmeb.com.br/rss.xml", "Filme B", "cinema"),
     ("https://www.metsul.com/feed/", "MetSul", "clima"),
+    ("https://castnews.com.br/feed/", "Castnews", "podcasts"),
+    # Google Notícias: só entra o que citar um evento da lista EVENTOS
+    ("https://news.google.com/rss/search?q=CCXP+OR+%22Brasil+Game+Show%22+OR+%22Game+XP%22+OR+%22Anime+Friends%22+OR+%22Bienal+do+Livro%22+OR+Lollapalooza+OR+%22Rock+in+Rio%22+OR+%22The+Town%22+OR+%22The+Game+Awards%22+when:3d&hl=pt-BR&gl=BR&ceid=BR:pt-419", "Google Notícias", "evento"),
     ("https://agenciabrasil.ebc.com.br/rss/geral/feed.xml", "Agência Brasil", None),
     ("https://www.bbc.com/portuguese/index.xml", "BBC Brasil", None),
     ("https://g1.globo.com/rss/g1/", "g1", None),
 ]
 
 # Palavras inteiras (sem diferenciar maiúsculas). Termine com * para valer como prefixo: "deputad*".
-POLITICA = ["lula", "bolsonaro", "bolsonarista*", "trump", "stf", "congresso", "senado", "senador*",
+POLITICA = ["lula", "bolsonaro", "bolsonarista*", "bolsonaris*", "lulis*", "petis*", "trump", "stf", "congresso", "senado", "senador*",
             "câmara dos deputados", "deputad*", "ministro", "ministra", "eleiç*", "eleitora*", "eleitor*",
             "partido*", "pt", "pl", "psdb", "governo federal", "planalto", "presidente da república",
             "impeachment", "cpi", "tarcísio", "haddad", "moraes", "alckmin", "nikolas", "prefeit*", "governador*",
@@ -100,6 +103,9 @@ ATORES = ["atores", "ator", "atriz", "atrizes", "astro", "estrela de", "elenco",
           "entrevista", "carreira", "descarta retorno", "volta ao papel", "aniversário", "homenage*"]
 SERIE = ["séries?", "temporadas?", "episódios?", "animes?", "minissérie", "novela", "reality", "netflix",
          "hbo max", "apple tv", "prime video", "disney\\+", "paramount\\+", "globoplay", "showrunner"]
+EVENTOS = ["podcasts?", "videocasts?", "ccxp", "brasil game show", "bgs", "game xp", "anime friends", "comic[- ]con",
+           "bienal do livro", "lollapalooza", "rock in rio", "the town", "primavera sound", "gamescom",
+           "the game awards", "summer game fest", "tokyo game show", "campus party", "web summit", "sxsw"]
 CORINTHIANS = ["corinthians", "timão", "neo química", "yuri alberto", "memphis"]
 
 _RX = {}
@@ -124,10 +130,16 @@ def classificar(titulo, desc, padrao):
         return "corinthians"
     if padrao == "corinthians":
         return "corinthians"
+    if padrao == "podcasts":
+        return "podcasts"
+    if padrao == "evento":
+        return "podcasts" if tem(titulo, EVENTOS) else None
     if padrao == "cinema":
         return "cinema"
     if padrao in ("pop", None) and tem(titulo, CINEMA):
         return "cinema"
+    if padrao not in ("games", "esportes") and tem(titulo, EVENTOS):
+        return "podcasts"
     if tem(titulo, IA):
         return "ia"
     if padrao in ("tecnologia", None) and tem(titulo, ESPORTE):
@@ -238,6 +250,14 @@ def ler_feed(url, fonte, padrao):
             m = re.search(r"/(20\d\d)/(\d\d)/(\d\d)/", link)
             if m and m.group(0) != time.strftime("/%Y/%m/%d/"):
                 ts = int(datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)), 15, tzinfo=timezone.utc).timestamp() * 1000)
+        fonte_item = fonte
+        if "news.google." in url:
+            m = re.search(r"<source[^>]*>(.*?)</source>", b, re.S)
+            fonte_item = texto_limpo(m.group(1)) if m else fonte
+            titulo = re.sub(r"\s+-\s+[^-]+$", "", titulo)
+            desc, desc_raw = "", ""
+            if len(titulo.split()) < 5:  # páginas de artista da CCXP etc.
+                continue
         if not titulo or not link.startswith("http") or re.search(r"globoesporte\.com\s*$", titulo):
             continue  # páginas de "ao vivo" do ge vêm sem foto e com título de sistema
         cat = classificar(titulo, desc, padrao)
@@ -245,7 +265,7 @@ def ler_feed(url, fonte, padrao):
             continue
         foto = foto_do_item(b) or foto_do_item(html.unescape(desc_raw))
         out.append({"id": hashlib.md5(link.encode()).hexdigest()[:12], "t": titulo, "u": link,
-                    "d": desc[:220], "ts": ts, "sem_data": not ts, "cat": cat, "src": fonte, "img": foto})
+                    "d": desc[:220], "ts": ts, "sem_data": not ts, "cat": cat, "src": fonte_item, "img": foto})
         # "Selma Blair quebra o silêncio…": título que abre com nome de gente também conta
         gente = re.match(r"^(?:[‘'\"][^’'\"]+[’'\"]: )?[A-ZÀ-Ý][a-zà-ÿ]+(?: (?:de |da |do )?[A-ZÀ-Ý][a-zà-ÿ]+){1,2} [a-zà-ÿ]{3,}", titulo)
         if cat in ("cinema", "obituario", "pop") and (tem(titulo, ATORES) or (cat == "cinema" and gente)):
@@ -314,6 +334,69 @@ def chave_titulo(t):
     return re.sub(r"[^a-z0-9]", "", t.lower())[:60]
 
 
+VAZIAS = set("""para pela pelo pelos pelas com sem sobre após antes entre como mais menos muito muita
+quando onde qual quais quem isso esse essa este esta aquele aquela seus suas dele dela eles elas
+será serão foram estão está ainda também já não sim novo nova novos novas diz afirma veja saiba
+vai pode podem deve devem fazer feito anos hoje ontem amanhã contra desde até""".split())
+
+
+def palavras(t):
+    """Palavras que contam para achar a mesma notícia em fontes diferentes."""
+    t = re.sub(r"[̀-ͯ]", "", __import__("unicodedata").normalize("NFD", t.lower()))
+    return {w for w in re.findall(r"[a-z0-9]+", t) if (len(w) >= 4 or w.isdigit()) and w not in VAZIAS}
+
+
+def mesma_noticia(a, b):
+    comum = len(a & b)
+    return comum >= 3 and comum / min(len(a), len(b)) >= 0.6
+
+
+ESPN = "https://site.api.espn.com/apis"
+COMP = {"Brazil Serie A": "Brasileirão", "Brazil Serie B": "Série B", "Brazil Copa do Brasil": "Copa do Brasil",
+        "CONMEBOL Libertadores": "Libertadores", "CONMEBOL Sudamericana": "Sul-Americana",
+        "Brazil Campeonato Paulista": "Paulistão"}
+
+
+def jogo(e, time_id="874"):
+    c = e["competitions"][0]
+    lados = {x["homeAway"]: x for x in c["competitors"]}
+    nosso = next(x for x in c["competitors"] if x["team"]["id"] == time_id)
+    outro = next(x for x in c["competitors"] if x["team"]["id"] != time_id)
+    def placar(x):
+        sc = x.get("score")
+        return (sc.get("displayValue") if isinstance(sc, dict) else sc) if sc is not None else None
+    def logo(t):
+        return (t.get("logos") or [{}])[0].get("href") or t.get("logo")
+    liga = (e.get("league") or {}).get("abbreviation") or (e.get("seasonType") or {}).get("name") or ""
+    st = c["status"]["type"]
+    return {"data": e["date"], "comp": COMP.get(liga, liga.replace("Brazil ", "")),
+            "casa": nosso["homeAway"] == "home", "adv": outro["team"].get("shortDisplayName") or outro["team"]["displayName"],
+            "advLogo": logo(outro["team"]), "nos": placar(nosso), "eles": placar(outro),
+            "fim": st.get("completed", False), "aoVivo": st.get("state") == "in",
+            "mandante": lados["home"]["team"].get("shortDisplayName"), "visitante": lados["away"]["team"].get("shortDisplayName")}
+
+
+def coletar_timao():
+    """Próximos jogos, últimos resultados e tabela do Brasileirão pela API aberta da ESPN."""
+    def pega(caminho):
+        return json.loads(baixar(f"{ESPN}/{caminho}")[0])
+    passados = sorted(pega("site/v2/sports/soccer/all/teams/874/schedule").get("events", []), key=lambda e: e["date"])
+    futuros = sorted(pega("site/v2/sports/soccer/all/teams/874/schedule?fixture=true").get("events", []), key=lambda e: e["date"])
+    ultimos = [jogo(e) for e in passados if e["competitions"][0]["status"]["type"].get("completed")][-5:][::-1]
+    proximos = [jogo(e) for e in futuros if not e["competitions"][0]["status"]["type"].get("completed")][:3]
+    tabela = []
+    for x in pega("v2/sports/soccer/bra.1/standings")["children"][0]["standings"]["entries"]:
+        st = {k["name"]: k.get("displayValue") for k in x["stats"]}
+        tabela.append({"pos": int(st.get("rank") or 0), "id": x["team"]["id"],
+                       "time": x["team"].get("shortDisplayName") or x["team"]["displayName"],
+                       "logo": (x["team"].get("logos") or [{}])[0].get("href"),
+                       "pts": st.get("points"), "j": st.get("gamesPlayed"), "v": st.get("wins"),
+                       "e": st.get("ties"), "d": st.get("losses"), "sg": st.get("pointDifferential")})
+    tabela.sort(key=lambda t: t["pos"])
+    print(f"corinthians: {len(proximos)} próximos, {len(ultimos)} últimos, tabela com {len(tabela)}")
+    return {"proximos": proximos, "ultimos": ultimos, "tabela": tabela}
+
+
 def main():
     antigos = {}
     if SAIDA.exists():
@@ -336,16 +419,25 @@ def main():
             i["ts"] = velho["ts"] if velho else agora
         todos[i["id"]] = i
     # tira itens velhos, do futuro e repetidos (mesmo título em fontes diferentes)
-    vistos, itens = set(), []
+    # a mesma notícia em várias fontes vira um card só, com as outras em "alt"
+    vistos, itens, chaves = set(), [], []
     for i in sorted(todos.values(), key=lambda x: (x["img"] is None, -x["ts"])):
         k = chave_titulo(i["t"])
+        i.pop("alt", None)
         if i["ts"] < limite or k in vistos or i["t"].rstrip().endswith("globoesporte.com") or classificar(i["t"], i.get("d", ""), i["cat"]) is None:
+            continue
+        pw = palavras(i["t"])
+        par = next((j for j, pj in zip(itens, chaves) if abs(j["ts"] - i["ts"]) < 2 * 86400_000 and mesma_noticia(pw, pj)), None)
+        if par:
+            if i["src"] != par["src"] and all(a["src"] != i["src"] for a in par.get("alt", [])):
+                par.setdefault("alt", []).append({"src": i["src"], "u": i["u"]})
             continue
         i["ts"] = min(i["ts"], agora)
         vistos.add(k)
         itens.append(i)
+        chaves.append(pw)
 
-    sem_foto = [i for i in itens if not i["img"]]
+    sem_foto = [i for i in itens if not i["img"] and "news.google." not in i["u"]]
     print(f"buscando foto de {len(sem_foto)} matérias…")
     with cf.ThreadPoolExecutor(12) as ex:
         for i, img in zip(sem_foto, ex.map(lambda x: og_image(x["u"]), sem_foto)):
@@ -364,6 +456,13 @@ def main():
         (RAIZ / "cinema.json").write_text(json.dumps(cine, ensure_ascii=False, separators=(",", ":")))
     except Exception as e:  # se a Ingresso cair, fica a lista anterior
         print(f"  ✗ cinema: {e}")
+    try:
+        timao = coletar_timao()
+        timao["updatedAt"] = agora
+        (RAIZ / "time.json").write_text(json.dumps(timao, ensure_ascii=False, separators=(",", ":")))
+    except Exception as e:  # se a ESPN cair, fica o placar anterior
+        print(f"  ✗ corinthians: {e}")
+    print(f"notícias juntadas: {sum(len(i.get('alt', [])) for i in final)}")
     print("por editoria:", json.dumps(por_cat, ensure_ascii=False))
     print(f"com foto: {sum(1 for i in final if i['img'])}/{len(final)}")
 

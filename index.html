@@ -18,7 +18,7 @@
   --bg:#FFFFFF; --band:#EEEEEE; --ink:#111111; --muted:#666666; --line:#E2E2E2;
   --dot:#E0201B;
   --c-corinthians:#111111; --c-esportes:#0E8A4F; --c-saude:#C8325E; --c-tecnologia:#1E62D6; --c-ia:#7A3FE0;
-  --c-ciencia:#3F4FD1; --c-games:#E07A10; --c-pop:#D1338F; --c-cinema:#B8860B; --c-clima:#0A8BAE; --c-obituario:#4B5568;
+  --c-ciencia:#3F4FD1; --c-games:#E07A10; --c-pop:#D1338F; --c-cinema:#B8860B; --c-clima:#0A8BAE; --c-obituario:#4B5568; --c-podcasts:#0F766E;
   --display:"Archivo","Helvetica Neue",Arial,sans-serif;
   --body:"Source Sans 3","Helvetica Neue",Arial,sans-serif;
   color-scheme:light;
@@ -37,6 +37,12 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .logo i{font-style:normal;color:var(--dot)}
 .date{margin-left:auto;font-size:13px;color:#BBBBBB;text-transform:capitalize;text-align:right}
 .search{border:0;background:none;padding:6px;cursor:pointer;color:#fff;display:grid;place-items:center}
+.wx{border:0;background:rgba(255,255,255,.1);color:#fff;border-radius:999px;padding:5px 10px;font:700 14px var(--body);cursor:pointer;display:none;align-items:center;gap:4px;white-space:nowrap}
+.wx.on{display:inline-flex}
+.date{margin-left:auto}
+.wxbox{display:none;padding-bottom:10px;font-size:14px;color:#ddd;gap:6px 18px;flex-wrap:wrap}
+.wxbox.open{display:flex}
+.wxbox b{color:#fff}
 .sbox{display:none;padding-bottom:10px}
 .sbox.open{display:block}
 .sbox input{width:100%;font:inherit;padding:10px 12px;border-radius:8px;border:0;background:#fff;color:var(--ink)}
@@ -159,6 +165,51 @@ details.filters summary{cursor:pointer;color:var(--ink);font-weight:600}
 .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .chip{display:flex;align-items:center;background:var(--band);color:var(--ink);border-radius:999px;padding:3px 3px 3px 12px;font-size:14px}
 .chip button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:17px;padding:0 9px}
+/* Menu "⋯" de cada notícia */
+.meta{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.dots{margin-left:auto;border:0;background:none;color:var(--muted);font:700 18px/1 var(--body);padding:2px 8px 6px;border-radius:6px;cursor:pointer}
+.dots:hover{background:var(--band);color:var(--ink)}
+.opts{display:grid;gap:8px}
+.opts>button,.opts a.op{font:600 16px var(--body);text-align:left;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:12px 14px;cursor:pointer}
+.opts>button:hover{border-color:var(--ink)}
+.opts .lbl{font-size:13px;color:var(--muted);margin-top:6px}
+.kws{display:flex;gap:6px;flex-wrap:wrap}
+.kws button{font:600 14px var(--body);border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;cursor:pointer;color:var(--ink)}
+.kws button:hover{border-color:var(--dot);color:var(--dot)}
+.alts{display:flex;gap:6px;flex-wrap:wrap}
+.alts a{font:600 14px var(--body);background:var(--band);border-radius:999px;padding:6px 12px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;z-index:50;max-width:calc(100% - 32px);text-align:center}
+
+/* Agenda do Timão */
+.jogo{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;text-align:center}
+.jogo .tm{display:grid;justify-items:center;gap:6px;font:700 15px var(--display)}
+.jogo .tm img{width:56px;height:56px;object-fit:contain}
+.jogo .x{font:800 13px var(--display);color:var(--muted)}
+.jogo .x big{display:block;font-size:30px;color:var(--ink)}
+.quando{text-align:center;font-size:15px}
+.quando b{font-family:var(--display)}
+.mini{font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.res{display:flex;flex-direction:column;gap:8px}
+.res div{display:grid;grid-template-columns:24px 22px minmax(0,1fr) auto;gap:8px;align-items:center;font-size:15px}
+.res img{width:22px;height:22px;object-fit:contain}
+.res small{color:var(--muted);font-size:12px}
+.vd{width:24px;height:24px;border-radius:4px;color:#fff;font:800 12px/24px var(--display);text-align:center}
+.vd.V{background:#0E8A4F}.vd.E{background:#8A8A8A}.vd.D{background:var(--dot)}
+table.tab{width:100%;border-collapse:collapse;font-size:14px}
+.tab th{font:700 11px var(--display);color:var(--muted);text-transform:uppercase;text-align:right;padding:4px 4px}
+.tab td{padding:6px 4px;border-top:1px solid var(--line);text-align:right}
+.tab td:nth-child(2),.tab th:nth-child(2){text-align:left}
+.tab td:nth-child(2) span{display:inline-flex;align-items:center;gap:6px}
+.tab img{width:18px;height:18px;object-fit:contain}
+.tab tr.nos td{background:#F3F3F3;font-weight:700}
+.tab td:first-child{width:26px;border-left:3px solid transparent;text-align:center}
+.tab tr.lib td:first-child{border-left-color:#1E62D6}
+.tab tr.reb td:first-child{border-left-color:var(--dot)}
+.prox-linha{font-size:14px;margin:-4px 0 0;color:#333}
+.prox-linha b{font-family:var(--display)}
+@media (min-width:860px){.timao-g{display:grid;grid-template-columns:1fr 1fr;gap:24px}}
+.timao-g{display:grid;gap:18px}
+.sub-ed{font:800 11px var(--display);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
 footer{font-size:13px;color:var(--muted);padding-block:6px 24px}
 </style>
 </head>
@@ -168,26 +219,29 @@ footer{font-size:13px;color:var(--muted);padding-block:6px 24px}
     <div class="bar">
       <div class="logo" id="logo" role="link" tabindex="0" aria-label="Voltar à capa">Ual<i>.</i></div>
       <div class="date" id="date"></div>
+      <button class="wx" id="wx" type="button" aria-expanded="false" aria-controls="wxbox" aria-label="Tempo em São Paulo"></button>
       <button class="search" id="sbtn" type="button" aria-label="Buscar">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
       </button>
     </div>
+    <div class="wxbox" id="wxbox"></div>
     <div class="sbox" id="sbox"><input id="q" type="search" placeholder="Buscar nas notícias de hoje" autocomplete="off"></div>
     <nav class="nav" id="nav" aria-label="Editorias"></nav>
   </div>
 </header>
 
 <main class="col" id="main">
-  <div class="empty pad" id="status"><strong>Abrindo a capa…</strong>Corinthians, esporte, saúde, tecnologia, IA, ciência, games, cultura pop, clima e obituário. Sem política.</div>
+  <div class="empty pad" id="status"><strong>Abrindo a capa…</strong>Corinthians, esporte, saúde, tecnologia, IA, ciência, games, cinema, pop, podcasts e eventos, clima e obituário. Sem política.</div>
   <div id="home"></div>
   <details class="filters pad">
-    <summary>Esconder mais assuntos</summary>
-    <p>Toda manchete com estas palavras some da capa. Fica salvo só neste aparelho.</p>
+    <summary>Assuntos e fontes escondidos</summary>
+    <p>Toda manchete com estas palavras some do Ual. Dá para esconder também pelo botão ⋯ de cada notícia. Fica salvo só neste aparelho.</p>
     <form class="fx" id="fx">
       <input id="kw" placeholder="ex.: celebridade, Mega-Sena" autocomplete="off">
       <button type="submit">Esconder</button>
     </form>
     <div class="tags" id="tags"></div>
+    <div class="tags" id="mutes"></div>
   </details>
   <dialog class="sheet" id="dlg"></dialog>
   <footer class="pad" id="foot">Toque numa manchete para ler a matéria no site original.</footer>
@@ -205,6 +259,7 @@ const CATS=[
   {id:"games",label:"Games"},
   {id:"cinema",label:"Cinema"},
   {id:"pop",label:"Pop"},
+  {id:"podcasts",label:"Podcasts e Eventos"},
   {id:"clima",label:"Clima"},
   {id:"obituario",label:"Obituário"},
 ];
@@ -213,13 +268,15 @@ const LABEL=Object.fromEntries(CATS.map(c=>[c.id,c.label]));
 const POLITICA=["lula","bolsonaro","trump","stf","congresso","senado","deputad","ministro","ministra","eleição","eleições","eleitoral","partido","governo federal","planalto","impeachment","cpi","prefeito","governador","política","político","golpe","anistia"];
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
 let view=(location.hash.slice(1)||"capa"), readSet=new Set(ls.get("read",[])), blocked=ls.get("blocked",[]), items=[], query="";
+// escondidos pelo menu ⋯: notícias soltas e fontes inteiras
+const mute=Object.assign({ids:[],src:[]},ls.get("mute",{}));
 if(!LABEL[view])view="capa";
 const $=s=>document.querySelector(s);
 $("#date").textContent=new Date().toLocaleDateString("pt-BR",{weekday:"short",day:"numeric",month:"short"});
 
 const norm=s=>" "+s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"")+" ";
 const bad=t=>{const s=norm(t);return POLITICA.some(w=>s.includes(norm(w).trim()))||blocked.some(w=>s.includes(norm(w).trim()))};
-const ok=()=>items.filter(i=>!bad(i.t)&&(!query||norm(i.t+" "+(i.d||"")).includes(norm(query).trim())));
+const ok=()=>items.filter(i=>!bad(i.t)&&!mute.ids.includes(i.id)&&!mute.src.includes(i.src)&&(!query||norm(i.t+" "+(i.d||"")).includes(norm(query).trim())));
 function ago(ts){const m=Math.round((Date.now()-ts)/60000);if(m<60)return `há ${Math.max(m,1)} min`;const h=Math.round(m/60);if(h<24)return `há ${h} h`;return new Date(ts).toLocaleDateString("pt-BR",{day:"numeric",month:"short"})}
 function hash(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -247,6 +304,11 @@ function paint(cv,cat,seed){
   }else if(cat==="ciencia"){
     for(let k=0;k<60;k++){g.fillStyle=`rgba(255,255,255,${.3+rnd()*.7})`;g.beginPath();g.arc(rnd()*w,rnd()*h,rnd()*w/200+1,0,7);g.fill()}
     const px=w*(.55+rnd()*.3),py=h*(.3+rnd()*.4),pr=h*.22;g.fillStyle="rgba(255,255,255,.88)";g.beginPath();g.arc(px,py,pr,0,7);g.fill();
+  }else if(cat==="podcasts"){ // microfone
+    const x=w*.5,y=h*.38,mw=h*.16,mh=h*.3;g.fillStyle="rgba(255,255,255,.88)";g.beginPath();g.roundRect(x-mw/2,y-mh/2,mw,mh,mw/2);g.fill();
+    g.strokeStyle="rgba(255,255,255,.88)";g.lineWidth=Math.max(3,w/90);g.beginPath();g.arc(x,y,mw*.95,.15*Math.PI,.85*Math.PI);g.stroke();
+    g.beginPath();g.moveTo(x,y+mw*.95);g.lineTo(x,h*.82);g.moveTo(x-mw*.8,h*.82);g.lineTo(x+mw*.8,h*.82);g.stroke();
+    for(let k=1;k<4;k++){g.strokeStyle=`rgba(255,255,255,${.5-k*.12})`;g.beginPath();g.arc(x,y,mw*(1.4+k*.6),-.3*Math.PI,.3*Math.PI);g.stroke();g.beginPath();g.arc(x,y,mw*(1.4+k*.6),.7*Math.PI,1.3*Math.PI);g.stroke()}
   }else if(cat==="clima"){
     g.fillStyle="rgba(255,230,140,.9)";g.beginPath();g.arc(w*.25,h*.35,h*.2,0,7);g.fill();
     g.fillStyle="rgba(255,255,255,.9)";const cx=w*.5,cy=h*.42;
@@ -274,7 +336,37 @@ function link(i){
   a.addEventListener("click",()=>{readSet.add(i.id);ls.set("read",[...readSet].slice(-800));a.classList.add("read")});
   return a;
 }
-const meta=i=>el("div","meta",`${i.src} · ${ago(i.ts)}`);
+function meta(i){
+  const m=el("div","meta",`${i.src} · ${ago(i.ts)}`);
+  if(i.alt?.length)m.append(` · +${i.alt.length} ${i.alt.length>1?"fontes":"fonte"}`);
+  const b=el("button","dots","⋯");b.type="button";b.setAttribute("aria-label","Opções desta notícia");
+  b.onclick=e=>{e.preventDefault();e.stopPropagation();openOpts(i)};
+  m.appendChild(b);return m;
+}
+// Palavras que dá para esconder: nomes próprios ("Patrick Stewart") e palavras longas do título
+const MIUDAS=new Set("para pela pelo com sem sobre após antes entre como mais menos quando onde qual quem isso esse essa este esta seus suas será serão foram estão ainda também novo nova novos novas veja saiba confira pode podem deve devem fazer anos hoje ontem amanhã contra desde primeiro primeira melhor melhores".split(" "));
+function chaves(t){
+  const out=[],add=w=>{w=w.replace(/^[“"'‘(]+|[”"'’),.:;!?]+$/g,"");if(w.length>2&&!MIUDAS.has(w.toLowerCase())&&!out.some(o=>norm(o).includes(norm(w))))out.push(w)}; // "Matheus" já está em "Matheus Bidu"
+  (t.match(/[A-ZÀ-Ý][\wÀ-ÿ'’-]+(?:\s+(?:de |da |do |dos |das )?[A-ZÀ-Ý][\wÀ-ÿ'’-]+)+/g)||[]).forEach(add);
+  t.split(/\s+/).filter(w=>w.replace(/\W/g,"").length>=6).forEach(add);
+  return out.slice(0,6);
+}
+function toast(msg){document.querySelector(".toast")?.remove();const t=el("div","toast",msg);document.body.appendChild(t);setTimeout(()=>t.remove(),3500)}
+function openOpts(i){
+  const d=$("#dlg");d.innerHTML="";
+  const x=el("button","x","×");x.type="button";x.setAttribute("aria-label","Fechar");x.onclick=()=>d.close();x.style.background="var(--band)";x.style.color="var(--ink)";d.appendChild(x);
+  const body=el("div","body");body.appendChild(el("div","facts","Não quero ver isso"));
+  const h=el("h2",null,i.t);h.style.fontSize="19px";h.style.paddingRight="36px";body.appendChild(h);
+  const o=el("div","opts");
+  const feito=msg=>{d.close();render();toast(msg)};
+  const b1=el("button",null,"Esconder só esta notícia");b1.type="button";b1.onclick=()=>{mute.ids.push(i.id);mute.ids=mute.ids.slice(-500);ls.set("mute",mute);feito("Notícia escondida.")};o.appendChild(b1);
+  if(i.src!=="Google Notícias"){const b2=el("button",null,`Não mostrar mais nada de ${i.src}`);b2.type="button";b2.onclick=()=>{if(!mute.src.includes(i.src))mute.src.push(i.src);ls.set("mute",mute);feito(`${i.src} escondido. Dá para trazer de volta no fim da página.`)};o.appendChild(b2)}
+  const ks=chaves(i.t);
+  if(ks.length){o.appendChild(el("div","lbl","Esconder tudo sobre:"));const k=el("div","kws");ks.forEach(w=>{const b=el("button",null,w);b.type="button";b.onclick=()=>{if(!blocked.includes(w))blocked.push(w);ls.set("blocked",blocked);feito(`Nada mais sobre “${w}”.`)};k.appendChild(b)});o.appendChild(k)}
+  if(i.alt?.length){o.appendChild(el("div","lbl","A mesma notícia em:"));const a=el("div","alts");[{src:i.src,u:i.u},...i.alt].forEach(s=>{const l=el("a",null,s.src);l.href=s.u;l.target="_blank";l.rel="noopener noreferrer";a.appendChild(l)});o.appendChild(a)}
+  body.appendChild(o);d.appendChild(body);
+  if(!d.open)d.showModal();
+}
 function go(id){view=id;history.replaceState(null,"",id==="capa"?location.pathname:"#"+id);render();scrollTo({top:0})}
 
 // Manchete principal + 3 destaques ao lado (um de cada editoria)
@@ -339,6 +431,7 @@ function renderHome(){
   if(view==="cinema"){renderCinema(home,all);return}
   if(view!=="capa"){
     const list=all.filter(i=>i.cat===view);
+    if(view==="corinthians"){const t=timaoPanel();if(t)home.appendChild(t)}
     home.appendChild(list.length?grid(list,LABEL[view],view):emptyBox("Nada nesta editoria agora","Volte mais tarde."));
     return;
   }
@@ -350,6 +443,10 @@ function renderHome(){
     const list=rest.filter(i=>i.cat===c.id);if(!list.length)continue;
     const big=c.id==="corinthians"||c.id==="esportes"||c.id==="cinema";
     const b=block(list,{label:c.label,cat:c.id,max:big?6:4,showMore:true});
+    if(c.id==="corinthians"&&timao?.proximos?.length){ // na capa, o próximo jogo logo abaixo do nome
+      const j=timao.proximos[0],l=el("p","prox-linha");l.append("Próximo jogo: ");l.appendChild(el("b",null,`${j.mandante} x ${j.visitante}`));l.append(` · ${quando(j.data)} · ${j.comp}`);
+      b.insertBefore(l,b.children[1]);
+    }
     if(c.id==="cinema"){ // na capa, o bloco de cinema mostra as estreias da semana
       const est=(cine?.estreias||[]).filter(f=>diasAte(f.data)<=7);
       if(est.length){const r=el("div","rail");est.forEach(f=>r.appendChild(movieCard(f)));const lb=el("div","daylbl","Estreias da semana");lb.style.textTransform="none";b.insertBefore(lb,b.children[1]);b.insertBefore(r,b.children[2])}
@@ -361,9 +458,13 @@ function renderHome(){
     pair.appendChild(b);if(pair.children.length===2)pair=null;
   }
 }
+function chip(txt,label,onx){const s=el("span","chip");s.appendChild(el("span",null,txt));const x=el("button",null,"×");x.type="button";x.setAttribute("aria-label",label);x.onclick=onx;s.appendChild(x);return s}
 function renderTags(){
   const box=$("#tags");box.innerHTML="";
-  blocked.forEach((w,idx)=>{const s=el("span","chip");s.appendChild(el("span",null,w));const x=el("button",null,"×");x.type="button";x.setAttribute("aria-label","Mostrar de novo "+w);x.onclick=()=>{blocked.splice(idx,1);ls.set("blocked",blocked);render()};s.appendChild(x);box.appendChild(s)});
+  blocked.forEach((w,idx)=>box.appendChild(chip(w,"Mostrar de novo "+w,()=>{blocked.splice(idx,1);ls.set("blocked",blocked);render()})));
+  const mb=$("#mutes");mb.innerHTML="";
+  mute.src.forEach((w,idx)=>mb.appendChild(chip("Fonte: "+w,"Mostrar de novo "+w,()=>{mute.src.splice(idx,1);ls.set("mute",mute);render()})));
+  if(mute.ids.length)mb.appendChild(chip(`${mute.ids.length} ${mute.ids.length>1?"notícias escondidas":"notícia escondida"}`,"Mostrar de novo as notícias escondidas",()=>{mute.ids=[];ls.set("mute",mute);render()}));
 }
 function render(){renderNav();renderHome();renderTags()}
 $("#fx").addEventListener("submit",e=>{e.preventDefault();const v=$("#kw").value.trim();if(v&&!blocked.includes(v)){blocked.push(v);ls.set("blocked",blocked)}$("#kw").value="";render()});
@@ -482,20 +583,90 @@ async function loadCinema(){
   try{const r=await fetch("cinema.json?t="+Date.now(),{cache:"no-store"});cine=await r.json();if(view==="cinema"||view==="capa")renderHome()}catch{}
 }
 
+// ===== Agenda do Timão (time.json, da ESPN) =====
+let timao=null;
+const quando=iso=>new Date(iso).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",weekday:"short",day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"}).replace(/\./g,"").replace(",",", ").replace(/\s+/g," ");
+const diaCurto=iso=>new Date(iso).toLocaleDateString("pt-BR",{timeZone:"America/Sao_Paulo",day:"numeric",month:"numeric"});
+const LOGO_SCCP="https://a.espncdn.com/i/teamlogos/soccer/500/874.png";
+function timaoPanel(){
+  if(!timao)return null;
+  const b=el("section","block pad timao");b.style.setProperty("--c","var(--c-corinthians)");
+  b.appendChild(el("div","ed","Agenda do Timão"));
+  const g=el("div","timao-g");
+  const col1=el("div");col1.style.display="grid";col1.style.gap="14px";
+  const j=timao.proximos?.[0];
+  if(j){
+    col1.appendChild(el("div","sub-ed",j.aoVivo?"Ao vivo agora":"Próximo jogo"));
+    const jg=el("div","jogo");
+    const tm=(nome,logo)=>{const t=el("div","tm");if(logo)t.appendChild(img(logo,nome));t.appendChild(el("span",null,nome));return t};
+    const nos=tm("Corinthians",LOGO_SCCP),eles=tm(j.adv,j.advLogo);
+    const x=el("div","x");x.appendChild(el("big",null,j.aoVivo?`${j.nos??0} × ${j.eles??0}`:"×"));
+    jg.append(j.casa?nos:eles,x,j.casa?eles:nos);col1.appendChild(jg);
+    const q=el("div","quando");q.appendChild(el("b",null,quando(j.data)));q.append(` · ${j.comp} · ${j.casa?"em casa":"fora de casa"}`);col1.appendChild(q);
+    const depois=(timao.proximos||[]).slice(1);
+    if(depois.length){const m=el("div","mini");depois.forEach(k=>m.appendChild(el("div",null,`Depois: ${k.mandante} x ${k.visitante} · ${quando(k.data)} · ${k.comp}`)));col1.appendChild(m)}
+  }
+  const ult=timao.ultimos||[];
+  if(ult.length){
+    const r=el("div");r.appendChild(el("div","sub-ed","Últimos jogos"));const rs=el("div","res");
+    ult.forEach(k=>{const n=+k.nos,e=+k.eles,vd=n>e?"V":n<e?"D":"E";const row=el("div");row.appendChild(el("span","vd "+vd,vd));row.appendChild(k.advLogo?img(k.advLogo):el("span"));
+      const t=el("span");t.append(`${k.casa?"Corinthians":k.adv} ${k.casa?k.nos:k.eles} × ${k.casa?k.eles:k.nos} ${k.casa?k.adv:"Corinthians"}`);row.appendChild(t);row.appendChild(el("small",null,`${k.comp} · ${diaCurto(k.data)}`));rs.appendChild(row)});
+    r.appendChild(rs);col1.appendChild(r);
+  }
+  g.appendChild(col1);
+  const tab=timao.tabela||[],me=tab.find(t=>t.id==="874");
+  if(me){
+    const col2=el("div");col2.appendChild(el("div","sub-ed",`Brasileirão: ${me.pos}º lugar · ${me.pts} pontos em ${me.j} jogos`));
+    const t=el("table","tab");const th=el("tr");["","Time","P","J","V","E","D","SG"].forEach(h=>th.appendChild(el("th",null,h)));t.appendChild(th);
+    const linhas=(todas)=>{t.querySelectorAll("tr:not(:first-child)").forEach(r=>r.remove());
+      tab.filter(x=>todas||Math.abs(x.pos-me.pos)<=3).forEach(x=>{const r=el("tr",(x.id==="874"?"nos ":"")+(x.pos<=6?"lib":x.pos>=17?"reb":""));
+        r.appendChild(el("td",null,x.pos));const n=el("td");const sp=el("span");if(x.logo)sp.appendChild(img(x.logo));sp.append(x.time);n.appendChild(sp);r.appendChild(n);
+        [x.pts,x.j,x.v,x.e,x.d,x.sg].forEach(v=>r.appendChild(el("td",null,v)));t.appendChild(r)})};
+    linhas(false);col2.appendChild(t);
+    const mais=el("button","more","Ver tabela completa");mais.type="button";mais.style.marginTop="10px";
+    mais.onclick=()=>{const full=mais.dataset.full!=="1";mais.dataset.full=full?"1":"";linhas(full);mais.textContent=full?"Ver menos":"Ver tabela completa"};
+    col2.appendChild(mais);
+    col2.appendChild(el("div","mini","Azul: vaga na Libertadores · Vermelho: rebaixamento"));
+    g.appendChild(col2);
+  }
+  b.appendChild(g);return b;
+}
+async function loadTimao(){
+  try{const r=await fetch("time.json?t="+Date.now(),{cache:"no-store"});timao=await r.json();if(view==="corinthians"||view==="capa")renderHome()}catch{}
+}
+
+// ===== Tempo em São Paulo (Open-Meteo, sem chave) =====
+const WMO=c=>c===0?["☀️","céu limpo"]:c<=2?["🌤️","sol entre nuvens"]:c===3?["☁️","nublado"]:c<=48?["🌫️","neblina"]:c<=57?["🌦️","garoa"]:c<=67?["🌧️","chuva"]:c<=77?["🌨️","neve"]:c<=82?["🌧️","pancadas de chuva"]:["⛈️","tempestade"];
+async function loadTempo(){
+  let w=ls.get("tempo",null);
+  if(!w||Date.now()-w.em>30*60e3){
+    try{const r=await fetch("https://api.open-meteo.com/v1/forecast?latitude=-23.55&longitude=-46.63&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=America%2FSao_Paulo&forecast_days=2");
+      const d=await r.json();w={em:Date.now(),d};ls.set("tempo",w)}catch{if(!w)return}
+  }
+  const {current:c,daily:dd}=w.d;if(!c)return;
+  const [ic,txt]=WMO(c.weather_code);
+  const bt=$("#wx");bt.textContent=`${ic} ${Math.round(c.temperature_2m)}°`;bt.classList.add("on");bt.title=`São Paulo: ${txt}`;
+  const box=$("#wxbox");box.innerHTML="";
+  const lin=(nome,k)=>{const s=el("span");s.appendChild(el("b",null,nome));s.append(` ${WMO(dd.weather_code[k])[0]} ${Math.round(dd.temperature_2m_min[k])}° a ${Math.round(dd.temperature_2m_max[k])}°, chuva ${dd.precipitation_probability_max[k]??0}%`);return s};
+  const ag=el("span");ag.appendChild(el("b",null,"São Paulo agora:"));ag.append(` ${Math.round(c.temperature_2m)}°, ${txt}`);
+  box.append(ag,lin("Hoje",0),lin("Amanhã",1));
+}
+$("#wx").addEventListener("click",()=>{const o=$("#wxbox").classList.toggle("open");$("#wx").setAttribute("aria-expanded",String(o))});
+
 async function load(){
   try{
     const r=await fetch("news.json?t="+Date.now(),{cache:"no-store"});
     const d=await r.json();
     items=d.items.filter(i=>i.t&&i.u&&i.ts&&i.cat).sort((a,b)=>b.ts-a.ts);
-    if(d.updatedAt)$("#foot").textContent=`Atualizado ${new Date(d.updatedAt).toLocaleString("pt-BR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}. Fontes: ge, g1, UOL, Agência Brasil, Olhar Digital, Canaltech, IGN, Veja Saúde, Drauzio Varella, Superinteressante, MetSul, BBC, Meu Timão, Cinepop, Pipoca Moderna, Observatório do Cinema, Filme B e Ingresso.com. Toque numa manchete para ler no site original.`;
+    if(d.updatedAt)$("#foot").textContent=`Atualizado ${new Date(d.updatedAt).toLocaleString("pt-BR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}. Fontes: ge, g1, UOL, Agência Brasil, Olhar Digital, Canaltech, IGN, Veja Saúde, Drauzio Varella, Superinteressante, MetSul, BBC, Meu Timão, Cinepop, Pipoca Moderna, Observatório do Cinema, Filme B, Castnews, Google Notícias (eventos), Ingresso.com, ESPN (jogos e tabela) e Open-Meteo (tempo). Toque numa manchete para ler no site original.`;
     renderHome();
   }catch(e){
     if(!items.length){const st=$("#status");st.innerHTML="";st.appendChild(el("strong",null,"Não deu para abrir a capa"));st.append("Confira a conexão e tente de novo.")}
   }
 }
-load();loadCinema();
+load();loadCinema();loadTimao();loadTempo();
 // voltou ao app depois de um tempo: busca a capa nova
-let hiddenAt=0;document.addEventListener("visibilitychange",()=>{if(document.hidden)hiddenAt=Date.now();else if(Date.now()-hiddenAt>30*60e3){load();loadCinema()}});
+let hiddenAt=0;document.addEventListener("visibilitychange",()=>{if(document.hidden)hiddenAt=Date.now();else if(Date.now()-hiddenAt>30*60e3){load();loadCinema();loadTimao();loadTempo()}});
 </script>
 </body>
 </html>

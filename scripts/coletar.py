@@ -441,6 +441,15 @@ def jw(query, variaveis):
         return json.loads(r.read())["data"]
 
 
+def arestas(query, variaveis, campo):
+    """Lista da JustWatch; às vezes ela devolve null (visto no GitHub): vira lista vazia em vez de quebrar."""
+    try:
+        return ((jw(query, variaveis) or {}).get(campo) or {}).get("edges") or []
+    except Exception as e:
+        print(f"  ✗ JustWatch {campo}: {e}")
+        return []
+
+
 def sinopse_pt(t):
     """Sem tradução, a JustWatch manda a sinopse em inglês: melhor não mostrar nada."""
     t = t.strip()
@@ -482,14 +491,14 @@ def coletar_streaming():
     novos, vistos = [], set()
     for d in range(8):  # últimos 7 dias, um dia por vez (a JustWatch agrupa por data)
         dia = time.strftime("%Y-%m-%d", time.localtime(time.time() - d * 86400))
-        for e in jw(q_novos, {"date": dia, "pageType": "NEW", **BR})["newTitles"]["edges"]:
+        for e in arestas(q_novos, {"date": dia, "pageType": "NEW", **BR}, "newTitles"):
             serv = SERVICOS.get(((e.get("newOffer") or {}).get("package") or {}).get("clearName"))
             n = e["node"]
             if serv and n.get("id") not in vistos:
                 vistos.add(n.get("id"))
                 novos.append(jw_titulo(n, serv, dia))
     breve = []
-    for e in jw(q_novos, {"date": hoje, "pageType": "UPCOMING", **BR})["newTitles"]["edges"]:
+    for e in arestas(q_novos, {"date": hoje, "pageType": "UPCOMING", **BR}, "newTitles"):
         n = e["node"]
         for u in (n.get("content") or {}).get("upcomingReleases") or []:
             serv = SERVICOS.get((u.get("package") or {}).get("clearName"))
@@ -501,7 +510,7 @@ def coletar_streaming():
     # estreias ainda sem tradução brasileira: tenta a de Portugal antes de ficar sem sinopse
     if any(not f["sin"] for f in breve):
         pt = {e["node"].get("id"): sinopse_pt((e["node"].get("content") or {}).get("shortDescription") or "")
-              for e in jw(q_novos, {"date": hoje, "pageType": "UPCOMING", "country": "BR", "language": "pt"})["newTitles"]["edges"]}
+              for e in arestas(q_novos, {"date": hoje, "pageType": "UPCOMING", "country": "BR", "language": "pt"}, "newTitles")}
         for f in breve:
             f["sin"] = f["sin"] or pt.get(f["id"], "")
     q_alta = f"""query A($country: Country!, $language: Language!) {{ popularTitles(country: $country, first: 30, sortBy: TRENDING, filter: {{ monetizationTypes: [FLATRATE],
@@ -509,7 +518,7 @@ def coletar_streaming():
       content(country: $country, language: $language) {{ {JW_CONTEUDO} }}
       offers(country: $country, platform: WEB, filter: {{ monetizationTypes: [FLATRATE] }}) {{ package {{ clearName }} }} }} }} }} }}"""
     alta = []
-    for e in jw(q_alta, BR)["popularTitles"]["edges"]:
+    for e in arestas(q_alta, BR, "popularTitles"):
         n = e["node"]
         serv = next((SERVICOS[o["package"]["clearName"]] for o in n.get("offers") or [] if o["package"]["clearName"] in SERVICOS), None)
         if serv:

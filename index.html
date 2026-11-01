@@ -433,7 +433,8 @@ function go(id){view=id;history.replaceState(null,"",id==="capa"?location.pathna
 // Manchete principal + 3 destaques ao lado (um de cada editoria)
 function hero(all){
   const picks=[],used=new Set();
-  const order=[...(emCCXP()?["ccxp"]:[]),"corinthians","ciencia","saude","esportes","tecnologia","ia","pop","games","clima"];
+  // Corinthians fica fora da manchete (tem bloco e aba próprios); até 06/12 a manchete é da CCXP
+  const order=[...(emCCXP()?["ccxp"]:[]),"ciencia","tecnologia","saude","ia","esportes","pop","games","clima"];
   for(const c of order){const i=all.find(x=>x.cat===c&&x.img&&!used.has(x.id));if(i){picks.push(i);used.add(i.id)}if(picks.length===4)break}
   if(!picks.length)return null;
   const s=el("section","hero pad");

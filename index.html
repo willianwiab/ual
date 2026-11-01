@@ -19,7 +19,7 @@
   --bg:#FFFFFF; --band:#EEEEEE; --ink:#111111; --muted:#666666; --line:#E2E2E2;
   --dot:#E0201B;
   --c-corinthians:#111111; --c-esportes:#0E8A4F; --c-saude:#C8325E; --c-tecnologia:#1E62D6; --c-ia:#7A3FE0;
-  --c-ciencia:#3F4FD1; --c-games:#E07A10; --c-pop:#D1338F; --c-cinema:#B8860B; --c-clima:#0A8BAE; --c-obituario:#4B5568; --c-podcasts:#0F766E; --c-igreja:#1B3A5C;
+  --c-ciencia:#3F4FD1; --c-games:#E07A10; --c-pop:#D1338F; --c-cinema:#B8860B; --c-clima:#0A8BAE; --c-obituario:#4B5568; --c-podcasts:#0F766E; --c-igreja:#1B3A5C; --c-ccxp:#F2B705;
   --display:"Archivo","Helvetica Neue",Arial,sans-serif;
   --body:"Source Sans 3","Helvetica Neue",Arial,sans-serif;
   --soft:#333333; --rowhl:#F3F3F3; --readc:#7a7a7a; --hdline:transparent;
@@ -242,6 +242,23 @@ table.tab{width:100%;border-collapse:collapse;font-size:14px}
 .links a:hover{border-color:var(--ink)}
 .cal{width:100%;height:520px;border:1px solid var(--line);border-radius:8px;background:#fff}
 @media (min-width:860px){.evs{grid-auto-columns:300px}}
+/* CCXP: amarelo e preto, até o fim do evento */
+.thumb[style*="c-ccxp"] .tag{color:#111}
+.ccxp-top{background:#111;color:#fff;padding-block:22px;display:grid;gap:10px;border-top:4px solid var(--c-ccxp)}
+.ccxp-top .kicker{color:var(--c-ccxp)}
+.ccxp-top h1{font-family:var(--display);font-weight:900;font-size:clamp(30px,7vw,52px);line-height:1;letter-spacing:-.03em;margin:0}
+.ccxp-top h1 i{font-style:normal;color:var(--c-ccxp)}
+.ccxp-top .info{font-size:15px;color:#ddd;display:grid;gap:4px}
+.ccxp-top .info b{color:#fff}
+.conta{display:flex;align-items:baseline;gap:8px;font-family:var(--display)}
+.conta big{font-size:clamp(44px,10vw,72px);font-weight:900;line-height:.9;color:var(--c-ccxp)}
+.conta span{font-weight:800;font-size:18px}
+.ccxp-top .btns{margin-top:4px}
+.ccxp-top .btn.pri{background:var(--c-ccxp);color:#111}
+.ccxp-faixa{background:#111;color:#fff;border-left:6px solid var(--c-ccxp);display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-block:12px;cursor:pointer}
+.ccxp-faixa b{font-family:var(--display);font-size:20px;color:var(--c-ccxp)}
+.ccxp-faixa span{font-size:14px;color:#ddd}
+.ccxp-faixa em{margin-left:auto;font-style:normal;font:700 14px var(--body)}
 footer{font-size:13px;color:var(--muted);padding-block:6px 24px}
 </style>
 </head>
@@ -281,8 +298,12 @@ footer{font-size:13px;color:var(--muted);padding-block:6px 24px}
 </main>
 
 <script>
+// CCXP26: 3 a 6 de dezembro, São Paulo Expo. Aba e destaque na capa até o último dia.
+const CCXP={ini:new Date("2026-12-03T12:00:00-03:00"),fim:new Date("2026-12-06T20:00:00-03:00"),ate:new Date("2026-12-07T00:00:00-03:00")};
+const emCCXP=()=>Date.now()<CCXP.ate;
 const CATS=[
   {id:"capa",label:"Capa"},
+  ...(emCCXP()?[{id:"ccxp",label:"CCXP"}]:[]),
   {id:"corinthians",label:"Corinthians"},
   {id:"igreja",label:"Igreja"},
   {id:"esportes",label:"Esporte"},
@@ -338,6 +359,12 @@ function paint(cv,cat,seed){
   }else if(cat==="ciencia"){
     for(let k=0;k<60;k++){g.fillStyle=`rgba(255,255,255,${.3+rnd()*.7})`;g.beginPath();g.arc(rnd()*w,rnd()*h,rnd()*w/200+1,0,7);g.fill()}
     const px=w*(.55+rnd()*.3),py=h*(.3+rnd()*.4),pr=h*.22;g.fillStyle="rgba(255,255,255,.88)";g.beginPath();g.arc(px,py,pr,0,7);g.fill();
+  }else if(cat==="ccxp"){ // quadrinho: retícula + estrela
+    g.fillStyle="#111";g.fillRect(0,0,w,h);g.fillStyle="rgba(242,183,5,.35)";const st=Math.max(8,w/30);
+    for(let y=0;y<h;y+=st)for(let x=(y/st)%2?st/2:0;x<w;x+=st){g.beginPath();g.arc(x,y,st*.22,0,7);g.fill()}
+    const cx=w*(.4+rnd()*.2),cy=h*.5,R=h*.42,r=h*.22,n=12;g.fillStyle="#F2B705";g.beginPath();
+    for(let k=0;k<n*2;k++){const a=k*Math.PI/n,rr=k%2?r:R;g.lineTo(cx+Math.cos(a)*rr*1.3,cy+Math.sin(a)*rr)}g.closePath();g.fill();
+    g.fillStyle="#111";g.font=`900 ${Math.round(h*.16)}px Archivo, Arial`;g.textAlign="center";g.textBaseline="middle";g.fillText("CCXP",cx,cy);
   }else if(cat==="podcasts"){ // microfone
     const x=w*.5,y=h*.38,mw=h*.16,mh=h*.3;g.fillStyle="rgba(255,255,255,.88)";g.beginPath();g.roundRect(x-mw/2,y-mh/2,mw,mh,mw/2);g.fill();
     g.strokeStyle="rgba(255,255,255,.88)";g.lineWidth=Math.max(3,w/90);g.beginPath();g.arc(x,y,mw*.95,.15*Math.PI,.85*Math.PI);g.stroke();
@@ -406,7 +433,7 @@ function go(id){view=id;history.replaceState(null,"",id==="capa"?location.pathna
 // Manchete principal + 3 destaques ao lado (um de cada editoria)
 function hero(all){
   const picks=[],used=new Set();
-  const order=["corinthians","ciencia","saude","esportes","tecnologia","ia","pop","games","clima"];
+  const order=[...(emCCXP()?["ccxp"]:[]),"corinthians","ciencia","saude","esportes","tecnologia","ia","pop","games","clima"];
   for(const c of order){const i=all.find(x=>x.cat===c&&x.img&&!used.has(x.id));if(i){picks.push(i);used.add(i.id)}if(picks.length===4)break}
   if(!picks.length)return null;
   const s=el("section","hero pad");
@@ -466,6 +493,7 @@ function renderHome(){
   if(view!=="capa"){
     const list=all.filter(i=>i.cat===view);
     if(view==="igreja"){renderIgreja(home);return}
+    if(view==="ccxp"){renderCCXP(home,list);return}
     if(view==="corinthians"){const t=timaoPanel();if(t)home.appendChild(t)}
     home.appendChild(list.length?grid(list,LABEL[view],view):emptyBox("Nada nesta editoria agora","Volte mais tarde."));
     return;
@@ -473,11 +501,13 @@ function renderHome(){
   const h=hero(all);
   if(h)home.appendChild(h.node);
   const rest=all.filter(i=>!h||!h.used.has(i.id));
+  if(emCCXP()){const f=ccxpFaixa();home.appendChild(f)} // contagem da CCXP logo abaixo da manchete
   const ig=igrejaBloco(true);if(ig)home.appendChild(ig); // próximos eventos da igreja logo abaixo da manchete
   let pair=null;
   for(const c of CATS.slice(1)){
-    const list=rest.filter(i=>i.cat===c.id);if(!list.length)continue;
-    const big=c.id==="corinthians"||c.id==="esportes"||c.id==="cinema";
+    let list=rest.filter(i=>i.cat===c.id);if(!list.length)continue;
+    if(c.id==="ccxp")list=[...list.filter(i=>i.img),...list.filter(i=>!i.img)]; // destaque da CCXP sempre com foto
+    const big=c.id==="corinthians"||c.id==="esportes"||c.id==="cinema"||c.id==="ccxp";
     const b=block(list,{label:c.label,cat:c.id,max:big?6:4,showMore:true});
     if(c.id==="corinthians"&&timao?.proximos?.length){ // na capa, o próximo jogo logo abaixo do nome
       const j=timao.proximos[0],l=el("p","prox-linha");l.append("Próximo jogo: ");l.appendChild(el("b",null,`${j.mandante} x ${j.visitante}`));l.append(` · ${quando(j.data)} · ${j.comp}`);
@@ -688,6 +718,38 @@ async function loadTempo(){
   box.append(ag,lin("Hoje",0),lin("Amanhã",1));
 }
 $("#wx").addEventListener("click",()=>{const o=$("#wxbox").classList.toggle("open");$("#wx").setAttribute("aria-expanded",String(o))});
+
+// ===== CCXP =====
+function ccxpConta(){
+  const agora=Date.now(),dias=Math.ceil((CCXP.ini-new Date(new Date().toDateString()))/864e5);
+  if(agora>=CCXP.ini&&agora<=CCXP.ate){const d=Math.min(4,Math.floor((agora-new Date("2026-12-03T00:00:00-03:00"))/864e5)+1);return {n:`Dia ${d}`,txt:"de 4 · acontecendo agora"}}
+  return {n:String(dias),txt:dias===1?"dia para a CCXP26":"dias para a CCXP26"};
+}
+function ccxpFaixa(){
+  const c=ccxpConta(),f=el("div","ccxp-faixa pad");f.setAttribute("role","link");f.tabIndex=0;
+  f.appendChild(el("b",null,`${c.n} ${c.txt}`));f.appendChild(el("span",null,"3 a 6 de dezembro · São Paulo Expo"));f.appendChild(el("em",null,"Página da CCXP ›"));
+  f.onclick=()=>go("ccxp");f.onkeydown=e=>{if(e.key==="Enter")go("ccxp")};return f;
+}
+function renderCCXP(home,list){
+  const t=el("section","ccxp-top pad");
+  t.appendChild(el("div","kicker","Comic Con Experience"));
+  const h=el("h1");h.append("CCXP");h.appendChild(el("i",null,"26"));t.appendChild(h);
+  const c=ccxpConta(),ct=el("div","conta");ct.appendChild(el("big",null,c.n));ct.appendChild(el("span",null,c.txt));t.appendChild(ct);
+  const inf=el("div","info");
+  [["Quando","3 a 6 de dezembro de 2026 (quinta a domingo)"],["Horário","qui e sex 12h–21h · sáb 11h–21h · dom 11h–20h"],["Onde","São Paulo Expo · Rodovia dos Imigrantes, km 1,5"],["Spoiler Night","2 de dezembro, 18h–21h (ingresso específico)"]].forEach(([k,v])=>{const l=el("div");l.appendChild(el("b",null,k+": "));l.append(v);inf.appendChild(l)});
+  t.appendChild(inf);
+  const bt=el("div","btns");
+  [["Ingressos","https://www.ccxp.com.br/ingressos","pri"],["Site oficial","https://www.ccxp.com.br","sec"],["Cobertura do Omelete","https://www.omelete.com.br/ccxp","sec"]].forEach(([l,u,k])=>{const a=el("a","btn "+k,l);a.href=u;a.target="_blank";a.rel="noopener noreferrer";bt.appendChild(a)});
+  t.appendChild(bt);home.appendChild(t);
+  if(!list.length){home.appendChild(emptyBox("Nenhuma notícia da CCXP agora","Volte mais tarde."));return}
+  const comFoto=[...list.filter(i=>i.img),...list.filter(i=>!i.img)]; // a manchete do bloco sempre com foto
+  home.appendChild(block(comFoto,{label:"Últimas da CCXP",cat:"ccxp",max:6}));
+  const conv=list.filter(i=>/confirma|convidad|atra[cç][aã]o|virá|vem ao brasil|painel/i.test(i.t));
+  if(conv.length)home.appendChild(grid(conv.slice(0,12),"Convidados e painéis confirmados","ccxp"));
+  const usados=new Set([...comFoto.slice(0,6),...conv.slice(0,12)].map(i=>i.id));
+  const resto=list.filter(i=>!usados.has(i.id));
+  if(resto.length)home.appendChild(grid(resto.slice(0,30),"Mais da CCXP","ccxp"));
+}
 
 // ===== Tema claro/escuro =====
 const LUA='<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';

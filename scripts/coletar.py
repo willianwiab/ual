@@ -19,7 +19,8 @@ SAIDA = RAIZ / "news.json"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36"
 DIAS = 4          # quanto tempo uma notícia fica na capa
 MAX_POR_CAT = 40
-MAX_CAT = {"cinema": 80}
+MAX_CAT = {"cinema": 80, "ccxp": 60}
+DIAS_CAT = {"ccxp": 21}  # notícia de CCXP fica mais tempo: a aba do evento junta tudo até dezembro
 
 # (url, nome da fonte, editoria padrão). None = decide pelas palavras do título.
 FEEDS = [
@@ -49,6 +50,7 @@ FEEDS = [
     ("https://filmeb.com.br/rss.xml", "Filme B", "cinema"),
     ("https://www.metsul.com/feed/", "MetSul", "clima"),
     ("https://castnews.com.br/feed/", "Castnews", "podcasts"),
+    ("https://news.google.com/rss/search?q=CCXP+when:7d&hl=pt-BR&gl=BR&ceid=BR:pt-419", "Google Notícias", "evento"),
     # Google Notícias: só entra o que citar um evento da lista EVENTOS
     ("https://news.google.com/rss/search?q=CCXP+OR+%22Brasil+Game+Show%22+OR+%22Game+XP%22+OR+%22Anime+Friends%22+OR+%22Bienal+do+Livro%22+OR+Lollapalooza+OR+%22Rock+in+Rio%22+OR+%22The+Town%22+OR+%22The+Game+Awards%22+when:3d&hl=pt-BR&gl=BR&ceid=BR:pt-419", "Google Notícias", "evento"),
     ("https://agenciabrasil.ebc.com.br/rss/geral/feed.xml", "Agência Brasil", None),
@@ -112,7 +114,7 @@ _RX = {}
 
 
 def tem(texto, palavras):
-    k = id(palavras)
+    k = tuple(palavras)  # não usar id(): lista criada na hora pode reaproveitar o id de outra
     if k not in _RX:
         partes = [re.escape(p[:-1]).replace(r"\[", "[").replace(r"\]", "]") + r"\w*" if p.endswith("*")
                   else p for p in palavras]
@@ -124,6 +126,8 @@ def classificar(titulo, desc, padrao):
     t = titulo + " " + desc[:200]
     if tem(titulo, POLITICA) or tem(desc[:300], POLITICA[:40]) or tem(titulo, RUIM):
         return None
+    if tem(titulo, ["ccxp*", "spoiler night"]):
+        return "ccxp"
     if tem(titulo, OBITO):
         return "obituario"
     if tem(titulo, CORINTHIANS):
@@ -291,6 +295,34 @@ def og_image(url):
     return None
 
 
+def ler_omelete_ccxp():
+    """Página de CCXP do Omelete (não tem RSS): lista as matérias e lê foto/data de cada uma."""
+    try:
+        pg = baixar("https://www.omelete.com.br/ccxp")[0].decode("utf-8", "ignore")
+    except Exception as e:
+        print(f"  ✗ Omelete CCXP: {e}")
+        return []
+    urls = list(dict.fromkeys(re.findall(r'href="(/ccxp/[a-z0-9-]{15,})"', pg)))[:20]
+    def le(u):
+        try:
+            a = baixar("https://www.omelete.com.br" + u, timeout=12)[0][:300_000].decode("utf-8", "ignore")
+        except Exception:
+            return None
+        meta = lambda k: (re.search(rf'(?:property|name)="{k}" content="([^"]+)"', a) or [None, None])[1]
+        titulo, quando = html.unescape(meta("og:title") or ""), meta("article:published_time")
+        ts = data_ts(quando.replace(" ", "T", 1)) if quando else None
+        if not titulo or not ts:
+            return None
+        link = "https://www.omelete.com.br" + u
+        return {"id": hashlib.md5(link.encode()).hexdigest()[:12], "t": titulo, "u": link,
+                "d": html.unescape(meta("og:description") or "")[:220], "ts": ts, "sem_data": False,
+                "cat": "ccxp", "src": "Omelete", "img": meta("og:image")}
+    with cf.ThreadPoolExecutor(8) as ex:
+        out = [i for i in ex.map(le, urls) if i and classificar(i["t"], i["d"], "ccxp")]
+    print(f"  ✓ {'Omelete CCXP':15} {len(out):3}/{len(urls):3}")
+    return out
+
+
 INGRESSO = "https://api-content.ingresso.com/v0"
 
 
@@ -428,6 +460,7 @@ def main():
     novos = []
     for url, fonte, cat in FEEDS:
         novos += ler_feed(url, fonte, cat)
+    novos += ler_omelete_ccxp()
 
     agora = int(time.time() * 1000)
     limite = agora - DIAS * 86400_000
@@ -445,7 +478,7 @@ def main():
     for i in sorted(todos.values(), key=lambda x: (x["img"] is None, -x["ts"])):
         k = chave_titulo(i["t"])
         i.pop("alt", None)
-        if i["ts"] < limite or k in vistos or i["t"].rstrip().endswith("globoesporte.com") or classificar(i["t"], i.get("d", ""), i["cat"]) is None:
+        if i["ts"] < agora - DIAS_CAT.get(i["cat"], DIAS) * 86400_000 or k in vistos or i["t"].rstrip().endswith("globoesporte.com") or classificar(i["t"], i.get("d", ""), i["cat"]) is None:
             continue
         pw = palavras(i["t"])
         par = next((j for j, pj in zip(itens, chaves) if abs(j["ts"] - i["ts"]) < 2 * 86400_000 and mesma_noticia(pw, pj)), None)

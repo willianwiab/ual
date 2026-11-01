@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Source+Sans+3:wght@400;600&display=swap">
+<script>try{const t=localStorage.getItem("tema");if(t)document.documentElement.dataset.theme=JSON.parse(t)}catch{}</script>
 <style>
 /* Portal de fundo branco e letra preta: manchete grande no topo, depois blocos por editoria
    (foto + manchete em negrito, linhas relacionadas com marcador), separados por faixas cinza. */
@@ -21,7 +22,23 @@
   --c-ciencia:#3F4FD1; --c-games:#E07A10; --c-pop:#D1338F; --c-cinema:#B8860B; --c-clima:#0A8BAE; --c-obituario:#4B5568; --c-podcasts:#0F766E; --c-igreja:#1B3A5C;
   --display:"Archivo","Helvetica Neue",Arial,sans-serif;
   --body:"Source Sans 3","Helvetica Neue",Arial,sans-serif;
+  --soft:#333333; --rowhl:#F3F3F3; --readc:#7a7a7a; --hdline:transparent;
   color-scheme:light;
+}
+/* Versão escura: segue o aparelho, ou o botão 🌙 do cabeçalho (fica salvo) */
+:root[data-theme="dark"]{
+  --bg:#171717; --band:#0A0A0A; --ink:#ECECEC; --muted:#9C9C9C; --line:#2E2E2E;
+  --soft:#CFCFCF; --rowhl:#262626; --readc:#808080; --hdline:#262626;
+  --c-corinthians:#6E6E6E; --c-obituario:#7F8CA3; --c-igreja:#4A7BB0;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#171717; --band:#0A0A0A; --ink:#ECECEC; --muted:#9C9C9C; --line:#2E2E2E;
+    --soft:#CFCFCF; --rowhl:#262626; --readc:#808080; --hdline:#262626;
+    --c-corinthians:#6E6E6E; --c-obituario:#7F8CA3; --c-igreja:#4A7BB0;
+    color-scheme:dark;
+  }
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--band)}
@@ -31,7 +48,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .col{max-width:1080px;margin:0 auto}
 .pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 
-.top{position:sticky;top:0;z-index:20;background:#111;color:#fff;border-bottom:0;padding-top:env(safe-area-inset-top,0px)}
+.top{position:sticky;top:0;z-index:20;background:#111;color:#fff;border-bottom:1px solid var(--hdline);padding-top:env(safe-area-inset-top,0px)}
 .bar{display:flex;align-items:center;gap:12px;padding-block:10px 4px}
 .logo{font-family:var(--display);font-weight:900;font-size:32px;letter-spacing:-.05em;line-height:1;cursor:pointer;color:#fff}
 .logo i{font-style:normal;color:var(--dot)}
@@ -68,7 +85,7 @@ main{display:flex;flex-direction:column;gap:12px;padding-block:12px 32px}
 .hero a{display:grid;gap:12px}
 .hero .thumb{aspect-ratio:16/9}
 .hero h1{font-family:var(--display);font-weight:800;font-size:clamp(24px,5.4vw,40px);line-height:1.08;letter-spacing:-.02em;margin:0;text-wrap:balance}
-.hero p{margin:0;color:#333;font-size:17px}
+.hero p{margin:0;color:var(--soft);font-size:17px}
 .side{display:grid;gap:14px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
 .side a{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;align-items:start}
 .side .thumb{aspect-ratio:4/3}
@@ -76,7 +93,7 @@ main{display:flex;flex-direction:column;gap:12px;padding-block:12px 32px}
 
 .lead{display:grid;grid-template-columns:minmax(0,42%) minmax(0,1fr);gap:16px;align-items:start}
 .lead h2{font-family:var(--display);font-weight:700;font-size:clamp(19px,4.4vw,25px);line-height:1.18;margin:0;letter-spacing:-.01em;text-wrap:pretty}
-.lead p{margin:6px 0 0;color:#444;font-size:15px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.lead p{margin:6px 0 0;color:var(--soft);font-size:15px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .meta{font-size:12px;color:var(--muted);margin-top:6px}
 ul.rel{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
 ul.rel li a{display:grid;grid-template-columns:10px minmax(0,1fr);gap:12px;align-items:start}
@@ -84,7 +101,7 @@ ul.rel li a::before{content:"";width:6px;height:6px;background:var(--dot);margin
 ul.rel .t{font-size:clamp(16px,4.1vw,18px);line-height:1.35}
 ul.rel .meta{margin-top:2px}
 a:hover h1,a:hover h2,a:hover h3,a:hover .t{text-decoration:underline;text-underline-offset:3px}
-.read h1,.read h2,.read h3,.read .t{color:#7a7a7a}
+.read h1,.read h2,.read h3,.read .t{color:var(--readc)}
 .more{align-self:flex-start;font:700 14px var(--body);color:var(--ink);background:none;border:1.5px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer}
 
 /* Lista de uma editoria: grade de cartões */
@@ -115,7 +132,7 @@ a:hover h1,a:hover h2,a:hover h3,a:hover .t{text-decoration:underline;text-under
 .btn.sec{background:rgba(255,255,255,.16);color:#fff}
 .tabs{display:flex;gap:6px;flex-wrap:wrap}
 .tabs button{font:700 13px var(--body);border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer}
-.tabs button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.tabs button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
 .rail{display:grid;grid-auto-flow:column;grid-auto-columns:132px;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px;scrollbar-width:thin}
 .movie{all:unset;cursor:pointer;scroll-snap-align:start;display:flex;flex-direction:column;gap:6px;min-width:0}
 .movie .pst{position:relative;aspect-ratio:2/3;border-radius:6px;overflow:hidden;background:var(--band)}
@@ -152,8 +169,8 @@ dialog.sheet::backdrop{background:rgba(0,0,0,.6)}
 .sheet dt{color:var(--muted)}
 .sheet dd{margin:0}
 .sheet .x{position:absolute;right:10px;top:10px;width:36px;height:36px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:20px;cursor:pointer;z-index:2}
-.sheet .btns .btn.pri{background:#111;color:#fff}
-.sheet .btns .btn.sec{background:var(--band);color:#111}
+.sheet .btns .btn.pri{background:var(--ink);color:var(--bg)}
+.sheet .btns .btn.sec{background:var(--band);color:var(--ink)}
 
 .empty{background:var(--bg);padding:24px 16px;color:var(--muted)}
 .empty strong{display:block;color:var(--ink);font-family:var(--display);font-size:20px;margin-bottom:4px}
@@ -201,11 +218,11 @@ table.tab{width:100%;border-collapse:collapse;font-size:14px}
 .tab td:nth-child(2),.tab th:nth-child(2){text-align:left}
 .tab td:nth-child(2) span{display:inline-flex;align-items:center;gap:6px}
 .tab img{width:18px;height:18px;object-fit:contain}
-.tab tr.nos td{background:#F3F3F3;font-weight:700}
+.tab tr.nos td{background:var(--rowhl);font-weight:700}
 .tab td:first-child{width:26px;border-left:3px solid transparent;text-align:center}
 .tab tr.lib td:first-child{border-left-color:#1E62D6}
 .tab tr.reb td:first-child{border-left-color:var(--dot)}
-.prox-linha{font-size:14px;margin:-4px 0 0;color:#333}
+.prox-linha{font-size:14px;margin:-4px 0 0;color:var(--soft)}
 .prox-linha b{font-family:var(--display)}
 @media (min-width:860px){.timao-g{display:grid;grid-template-columns:1fr 1fr;gap:24px}}
 .timao-g{display:grid;gap:18px}
@@ -235,6 +252,7 @@ footer{font-size:13px;color:var(--muted);padding-block:6px 24px}
       <div class="logo" id="logo" role="link" tabindex="0" aria-label="Voltar à capa">Ual<i>.</i></div>
       <div class="date" id="date"></div>
       <button class="wx" id="wx" type="button" aria-expanded="false" aria-controls="wxbox" aria-label="Tempo em São Paulo"></button>
+      <button class="search" id="tema" type="button" aria-label="Versão escura"></button>
       <button class="search" id="sbtn" type="button" aria-label="Buscar">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
       </button>
@@ -670,6 +688,15 @@ async function loadTempo(){
   box.append(ag,lin("Hoje",0),lin("Amanhã",1));
 }
 $("#wx").addEventListener("click",()=>{const o=$("#wxbox").classList.toggle("open");$("#wx").setAttribute("aria-expanded",String(o))});
+
+// ===== Tema claro/escuro =====
+const LUA='<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+const SOL='<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+const escuro=()=>document.documentElement.dataset.theme?document.documentElement.dataset.theme==="dark":matchMedia("(prefers-color-scheme: dark)").matches;
+function pintaTema(){const e=escuro();const b=$("#tema");b.innerHTML=e?SOL:LUA;b.setAttribute("aria-label",e?"Versão clara":"Versão escura");b.title=b.getAttribute("aria-label")}
+$("#tema").addEventListener("click",()=>{const t=escuro()?"light":"dark";document.documentElement.dataset.theme=t;ls.set("tema",t);pintaTema();renderHome()});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{pintaTema();renderHome()});
+pintaTema();
 
 // ===== Igreja: Lugar do Encontro (igreja.json, do app InPeace) + agenda do Will =====
 let igreja=null;

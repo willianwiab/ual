@@ -281,7 +281,7 @@ footer{font-size:13px;color:var(--muted);padding-block:6px 24px}
 </header>
 
 <main class="col" id="main">
-  <div class="empty pad" id="status"><strong>Abrindo a capa…</strong>Corinthians, esporte, saúde, tecnologia, IA, ciência, games, cinema, pop, podcasts e eventos, clima e obituário. Sem política.</div>
+  <div class="empty pad" id="status"><strong>Abrindo a capa…</strong>Corinthians, esporte, saúde, tecnologia, IA, ciência, games, cinema, pop e clima. Sem política e sem notícia ruim.</div>
   <div id="home"></div>
   <details class="filters pad">
     <summary>Assuntos e fontes escondidos</summary>
@@ -314,9 +314,7 @@ const CATS=[
   {id:"games",label:"Games"},
   {id:"cinema",label:"Cinema"},
   {id:"pop",label:"Pop"},
-  {id:"podcasts",label:"Podcasts e Eventos"},
   {id:"clima",label:"Clima"},
-  {id:"obituario",label:"Obituário"},
 ];
 const LABEL=Object.fromEntries(CATS.map(c=>[c.id,c.label]));
 // Rede de segurança: o coletor já tira política, isto pega o que escapar.
@@ -702,21 +700,45 @@ async function loadTimao(){
   try{const r=await fetch("time.json?t="+Date.now(),{cache:"no-store"});timao=await r.json();if(view==="corinthians"||view==="capa")renderHome()}catch{}
 }
 
-// ===== Tempo em São Paulo (Open-Meteo, sem chave) =====
+// ===== Tempo onde o aparelho está (Open-Meteo, sem chave); sem permissão, São Paulo =====
 const WMO=c=>c===0?["☀️","céu limpo"]:c<=2?["🌤️","sol entre nuvens"]:c===3?["☁️","nublado"]:c<=48?["🌫️","neblina"]:c<=57?["🌦️","garoa"]:c<=67?["🌧️","chuva"]:c<=77?["🌨️","neve"]:c<=82?["🌧️","pancadas de chuva"]:["⛈️","tempestade"];
-async function loadTempo(){
+const SP={lat:-23.55,lon:-46.63,nome:"São Paulo"};
+function posicao(){
+  return new Promise(ok=>{
+    if(!navigator.geolocation)return ok(null);
+    navigator.geolocation.getCurrentPosition(p=>ok({lat:+p.coords.latitude.toFixed(2),lon:+p.coords.longitude.toFixed(2)}),()=>ok(null),{maximumAge:30*60e3,timeout:10e3});
+  });
+}
+async function nomeDoLugar(l){ // cidade/bairro para mostrar no quadro do tempo
+  try{const r=await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${l.lat}&longitude=${l.lon}&localityLanguage=pt`);const d=await r.json();return d.locality||d.city||d.principalSubdivision||"Sua região"}catch{return "Sua região"}
+}
+async function local(pedir){
+  let perm="prompt";try{perm=(await navigator.permissions?.query({name:"geolocation"}))?.state||"prompt"}catch{}
+  // pergunta sozinho só na 1ª visita; depois só quando o usuário tocar no botão
+  if(perm==="denied"||(perm==="prompt"&&!pedir&&ls.get("geoPerguntado",false)))return ls.get("local",null)&&perm!=="denied"?ls.get("local",null):SP;
+  ls.set("geoPerguntado",true);
+  const p=await posicao();if(!p)return ls.get("local",null)||SP;
+  const velho=ls.get("local",null);
+  if(velho&&Math.abs(velho.lat-p.lat)<.03&&Math.abs(velho.lon-p.lon)<.03)return velho;
+  const l={...p,nome:await nomeDoLugar(p)};ls.set("local",l);return l;
+}
+async function loadTempo(pedir=false){
+  const l=await local(pedir);
   let w=ls.get("tempo",null);
-  if(!w||Date.now()-w.em>30*60e3){
-    try{const r=await fetch("https://api.open-meteo.com/v1/forecast?latitude=-23.55&longitude=-46.63&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=America%2FSao_Paulo&forecast_days=2");
-      const d=await r.json();w={em:Date.now(),d};ls.set("tempo",w)}catch{if(!w)return}
+  if(!w||Date.now()-w.em>30*60e3||w.lat!==l.lat||w.lon!==l.lon){
+    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${l.lat}&longitude=${l.lon}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=2`);
+      const d=await r.json();w={em:Date.now(),lat:l.lat,lon:l.lon,d};ls.set("tempo",w)}catch{if(!w)return}
   }
   const {current:c,daily:dd}=w.d;if(!c)return;
   const [ic,txt]=WMO(c.weather_code);
-  const bt=$("#wx");bt.textContent=`${ic} ${Math.round(c.temperature_2m)}°`;bt.classList.add("on");bt.title=`São Paulo: ${txt}`;
+  const bt=$("#wx");bt.textContent=`${ic} ${Math.round(c.temperature_2m)}°`;bt.classList.add("on");bt.title=`${l.nome}: ${txt}`;bt.setAttribute("aria-label",`Tempo em ${l.nome}`);
   const box=$("#wxbox");box.innerHTML="";
   const lin=(nome,k)=>{const s=el("span");s.appendChild(el("b",null,nome));s.append(` ${WMO(dd.weather_code[k])[0]} ${Math.round(dd.temperature_2m_min[k])}° a ${Math.round(dd.temperature_2m_max[k])}°, chuva ${dd.precipitation_probability_max[k]??0}%`);return s};
-  const ag=el("span");ag.appendChild(el("b",null,"São Paulo agora:"));ag.append(` ${Math.round(c.temperature_2m)}°, ${txt}`);
+  const ag=el("span");ag.appendChild(el("b",null,`${l===SP?"São Paulo":"📍 "+l.nome} agora:`));ag.append(` ${Math.round(c.temperature_2m)}°, ${txt}`);
   box.append(ag,lin("Hoje",0),lin("Amanhã",1));
+  if(l===SP){const b=el("button","wx on","📍 Usar minha localização");b.type="button";b.onclick=async e=>{e.stopPropagation();let st="prompt";try{st=(await navigator.permissions?.query({name:"geolocation"}))?.state||"prompt"}catch{}
+    if(st==="denied"){b.textContent="Localização bloqueada: libere este site nos ajustes do navegador";return}
+    b.textContent="Procurando…";loadTempo(true)};box.appendChild(b)}
 }
 $("#wx").addEventListener("click",()=>{const o=$("#wxbox").classList.toggle("open");$("#wx").setAttribute("aria-expanded",String(o))});
 
@@ -816,7 +838,7 @@ async function load(){
     const r=await fetch("news.json?t="+Date.now(),{cache:"no-store"});
     const d=await r.json();
     items=d.items.filter(i=>i.t&&i.u&&i.ts&&i.cat).sort((a,b)=>b.ts-a.ts);
-    if(d.updatedAt)$("#foot").textContent=`Atualizado ${new Date(d.updatedAt).toLocaleString("pt-BR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}. Fontes: ge, g1, UOL, Agência Brasil, Olhar Digital, Canaltech, IGN, Veja Saúde, Drauzio Varella, Superinteressante, MetSul, BBC, Meu Timão, Cinepop, Pipoca Moderna, Observatório do Cinema, Filme B, Castnews, Google Notícias (eventos), Ingresso.com, ESPN (jogos e tabela), app da Lugar do Encontro e Open-Meteo (tempo). Toque numa manchete para ler no site original.`;
+    if(d.updatedAt)$("#foot").textContent=`Atualizado ${new Date(d.updatedAt).toLocaleString("pt-BR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}. Fontes: ge, g1, UOL, Agência Brasil, Olhar Digital, Canaltech, IGN, Veja Saúde, Drauzio Varella, Superinteressante, MetSul, BBC, Meu Timão, Cinepop, Pipoca Moderna, Observatório do Cinema, Filme B, Google Notícias (CCXP), Ingresso.com, ESPN (jogos e tabela), app da Lugar do Encontro e Open-Meteo (tempo). Toque numa manchete para ler no site original.`;
     renderHome();
   }catch(e){
     if(!items.length){const st=$("#status");st.innerHTML="";st.appendChild(el("strong",null,"Não deu para abrir a capa"));st.append("Confira a conexão e tente de novo.")}

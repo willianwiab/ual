@@ -49,10 +49,7 @@ FEEDS = [
     ("https://observatoriodocinema.com.br/feed/", "Observatório do Cinema", "cinema"),
     ("https://filmeb.com.br/rss.xml", "Filme B", "cinema"),
     ("https://www.metsul.com/feed/", "MetSul", "clima"),
-    ("https://castnews.com.br/feed/", "Castnews", "podcasts"),
     ("https://news.google.com/rss/search?q=CCXP+when:7d&hl=pt-BR&gl=BR&ceid=BR:pt-419", "Google Notícias", "evento"),
-    # Google Notícias: só entra o que citar um evento da lista EVENTOS
-    ("https://news.google.com/rss/search?q=CCXP+OR+%22Brasil+Game+Show%22+OR+%22Game+XP%22+OR+%22Anime+Friends%22+OR+%22Bienal+do+Livro%22+OR+Lollapalooza+OR+%22Rock+in+Rio%22+OR+%22The+Town%22+OR+%22The+Game+Awards%22+when:3d&hl=pt-BR&gl=BR&ceid=BR:pt-419", "Google Notícias", "evento"),
     ("https://agenciabrasil.ebc.com.br/rss/geral/feed.xml", "Agência Brasil", None),
     ("https://www.bbc.com/portuguese/index.xml", "BBC Brasil", None),
     ("https://g1.globo.com/rss/g1/", "g1", None),
@@ -107,9 +104,6 @@ ATORES = ["atores", "ator", "atriz", "atrizes", "astro", "estrela de", "elenco",
           "entrevista", "carreira", "descarta retorno", "volta ao papel", "aniversário", "homenage*"]
 SERIE = ["séries?", "temporadas?", "episódios?", "animes?", "minissérie", "novela", "reality", "netflix",
          "hbo max", "apple tv", "prime video", "disney\\+", "paramount\\+", "globoplay", "showrunner"]
-EVENTOS = ["podcasts?", "videocasts?", "ccxp", "brasil game show", "bgs", "game xp", "anime friends", "comic[- ]con",
-           "bienal do livro", "lollapalooza", "rock in rio", "the town", "primavera sound", "gamescom",
-           "the game awards", "summer game fest", "tokyo game show", "campus party", "web summit", "sxsw"]
 CORINTHIANS = ["corinthians", "timão", "neo química", "yuri alberto", "memphis"]
 
 _RX = {}
@@ -131,21 +125,17 @@ def classificar(titulo, desc, padrao):
     if tem(titulo, ["ccxp*", "spoiler night"]):
         return "ccxp"
     if tem(titulo, OBITO):
-        return "obituario"
+        return None  # obituário saiu do Ual (01/11)
     if tem(titulo, CORINTHIANS):
         return "corinthians"
     if padrao == "corinthians":
         return "corinthians"
-    if padrao == "podcasts":
-        return "podcasts"
-    if padrao == "evento":
-        return "podcasts" if tem(titulo, EVENTOS) else None
+    if padrao in ("evento", "podcasts", "obituario"):  # Google Notícias da CCXP; editorias antigas que saíram
+        return None
     if padrao == "cinema":
         return "cinema"
     if padrao in ("pop", None) and tem(titulo, CINEMA):
         return "cinema"
-    if padrao not in ("games", "esportes") and tem(titulo, EVENTOS):
-        return "podcasts"
     if tem(titulo, IA):
         return "ia"
     if padrao in ("tecnologia", None) and tem(titulo, ESPORTE):

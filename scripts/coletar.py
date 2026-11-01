@@ -421,6 +421,105 @@ def coletar_timao():
     return {"proximos": proximos, "ultimos": ultimos, "tabela": tabela}
 
 
+JW = "https://apis.justwatch.com/graphql"
+JW_IMG = "https://images.justwatch.com"
+JW_CONTEUDO = "title shortDescription posterUrl backdrops { backdropUrl } originalReleaseYear genres { shortName } clips { externalId provider } fullPath"
+GENEROS = {"act": "Ação", "ani": "Animação", "cmy": "Comédia", "crm": "Crime", "doc": "Documentário", "drm": "Drama",
+           "fnt": "Fantasia", "hrr": "Terror", "hst": "História", "fml": "Família", "msc": "Música", "rma": "Romance",
+           "scf": "Ficção científica", "spt": "Esporte", "trl": "Suspense", "war": "Guerra", "wsn": "Faroeste",
+           "rly": "Reality", "eur": "Europeu"}
+# serviços que entram (nome da JustWatch → nome curto na página); canais dentro da Amazon ficam de fora
+SERVICOS = {"Netflix": "Netflix", "Amazon Prime Video": "Prime Video", "Disney Plus": "Disney+", "HBO Max": "HBO Max",
+            "Globoplay": "Globoplay", "Apple TV": "Apple TV", "Apple TV Plus": "Apple TV", "Paramount Plus": "Paramount+",
+            "Crunchyroll": "Crunchyroll", "Mercado Play": "Mercado Play"}
+
+
+def jw(query, variaveis):
+    req = urllib.request.Request(JW, data=json.dumps({"query": query, "variables": variaveis}).encode(),
+                                 headers={"Content-Type": "application/json", "User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=25) as r:
+        return json.loads(r.read())["data"]
+
+
+def sinopse_pt(t):
+    """Sem tradução, a JustWatch manda a sinopse em inglês: melhor não mostrar nada."""
+    t = t.strip()
+    ingles = len(re.findall(r"\b(the|and|with|her|his|their|when|who)\b", t, re.I))
+    portugues = len(re.findall(r"\b(de|que|uma|para|com|não|seu|sua)\b", t, re.I))
+    return "" if ingles > portugues else t[:400]
+
+
+def jw_titulo(n, servico, data=None):
+    """Resume um filme ou temporada da JustWatch no formato da ficha da página (mesmo do cinema)."""
+    c = n.get("content") or {}
+    show = ((n.get("show") or {}).get("content")) or {}
+    temporada = n.get("__typename") == "Season" or n.get("objectType") == "SHOW"
+    nome = show.get("title") or c.get("title") or ""
+    if n.get("__typename") == "Season" and c.get("seasonNumber"):
+        nome = f"{nome} — {c['seasonNumber']}ª temporada"
+    img = lambda u, perfil: f"{JW_IMG}{u.replace('{profile}', perfil).replace('{format}', 'jpg')}" if u else None
+    trailer = next((f"https://www.youtube.com/watch?v={k['externalId']}" for k in c.get("clips") or []
+                    if k.get("provider") == "YOUTUBE"), None)
+    fundo = (c.get("backdrops") or show.get("backdrops") or [{}])[0].get("backdropUrl")
+    return {"id": n.get("id"), "t": nome, "serie": temporada, "serv": servico, "data": data,
+            "sin": sinopse_pt(c.get("shortDescription") or show.get("shortDescription") or ""),
+            "poster": img(c.get("posterUrl") or show.get("posterUrl"), "s332"), "wide": img(fundo, "s1440"),
+            "trailer": trailer, "gen": [GENEROS[g["shortName"]] for g in c.get("genres") or [] if g["shortName"] in GENEROS][:3],
+            "ano": c.get("originalReleaseYear"), "min": c.get("runtime") or "", "class": c.get("ageCertification") or "",
+            "u": "https://www.justwatch.com" + (c.get("fullPath") or "")}
+
+
+def coletar_streaming():
+    """Novidades da semana, estreias que vêm aí e o que está em alta nos streamings do Brasil (JustWatch)."""
+    frag = f"""... on Movie {{ id content(country: $country, language: $language) {{ {JW_CONTEUDO} runtime ageCertification upcomingReleases {{ releaseDate package {{ clearName }} }} }} }}
+      ... on Season {{ id content(country: $country, language: $language) {{ {JW_CONTEUDO} seasonNumber upcomingReleases {{ releaseDate package {{ clearName }} }} }}
+        show {{ content(country: $country, language: $language) {{ title shortDescription posterUrl backdrops {{ backdropUrl }} }} }} }}"""
+    q_novos = f"""query N($date: Date!, $pageType: NewPageType!, $country: Country!, $language: Language!) {{ newTitles(country: $country, date: $date, first: 60, pageType: $pageType,
+      priceDrops: false, filter: {{ monetizationTypes: [FLATRATE] }}) {{ edges {{ newOffer(platform: WEB) {{ package {{ clearName }} }}
+      node {{ __typename {frag} }} }} }} }}"""
+    hoje = time.strftime("%Y-%m-%d")
+    BR = {"country": "BR", "language": "pt-BR"}  # como variável: escrito direto na consulta, a JustWatch não manda os trailers
+    novos, vistos = [], set()
+    for d in range(8):  # últimos 7 dias, um dia por vez (a JustWatch agrupa por data)
+        dia = time.strftime("%Y-%m-%d", time.localtime(time.time() - d * 86400))
+        for e in jw(q_novos, {"date": dia, "pageType": "NEW", **BR})["newTitles"]["edges"]:
+            serv = SERVICOS.get(((e.get("newOffer") or {}).get("package") or {}).get("clearName"))
+            n = e["node"]
+            if serv and n.get("id") not in vistos:
+                vistos.add(n.get("id"))
+                novos.append(jw_titulo(n, serv, dia))
+    breve = []
+    for e in jw(q_novos, {"date": hoje, "pageType": "UPCOMING", **BR})["newTitles"]["edges"]:
+        n = e["node"]
+        for u in (n.get("content") or {}).get("upcomingReleases") or []:
+            serv = SERVICOS.get((u.get("package") or {}).get("clearName"))
+            dt = (u.get("releaseDate") or "")[:10]
+            if serv and hoje <= dt <= time.strftime("%Y-%m-%d", time.localtime(time.time() + 60 * 86400)):
+                breve.append(jw_titulo(n, serv, dt))
+                break
+    breve.sort(key=lambda f: f["data"])
+    # estreias ainda sem tradução brasileira: tenta a de Portugal antes de ficar sem sinopse
+    if any(not f["sin"] for f in breve):
+        pt = {e["node"].get("id"): sinopse_pt((e["node"].get("content") or {}).get("shortDescription") or "")
+              for e in jw(q_novos, {"date": hoje, "pageType": "UPCOMING", "country": "BR", "language": "pt"})["newTitles"]["edges"]}
+        for f in breve:
+            f["sin"] = f["sin"] or pt.get(f["id"], "")
+    q_alta = f"""query A($country: Country!, $language: Language!) {{ popularTitles(country: $country, first: 30, sortBy: TRENDING, filter: {{ monetizationTypes: [FLATRATE],
+      packages: ["nfx", "prv", "dnp", "mxx", "gop", "atp", "pmp", "cru"] }}) {{ edges {{ node {{ __typename objectType id
+      content(country: $country, language: $language) {{ {JW_CONTEUDO} }}
+      offers(country: $country, platform: WEB, filter: {{ monetizationTypes: [FLATRATE] }}) {{ package {{ clearName }} }} }} }} }} }}"""
+    alta = []
+    for e in jw(q_alta, BR)["popularTitles"]["edges"]:
+        n = e["node"]
+        serv = next((SERVICOS[o["package"]["clearName"]] for o in n.get("offers") or [] if o["package"]["clearName"] in SERVICOS), None)
+        if serv:
+            alta.append(jw_titulo(n, serv))
+    tem_poster = lambda l: [f for f in l if f["poster"]]
+    out = {"novos": tem_poster(novos)[:160], "breve": tem_poster(breve), "alta": tem_poster(alta)}
+    print(f"streaming: {len(out['novos'])} novidades, {len(out['breve'])} em breve, {len(out['alta'])} em alta")
+    return out
+
+
 INPEACE = "https://admin.inpeaceapp.com"
 IGREJA_SITE = "https://lugardoencontro.inpeaceapp.com"
 
@@ -508,6 +607,12 @@ def main():
         (RAIZ / "time.json").write_text(json.dumps(timao, ensure_ascii=False, separators=(",", ":")))
     except Exception as e:  # se a ESPN cair, fica o placar anterior
         print(f"  ✗ corinthians: {e}")
+    try:
+        st = coletar_streaming()
+        st["updatedAt"] = agora
+        (RAIZ / "streaming.json").write_text(json.dumps(st, ensure_ascii=False, separators=(",", ":")))
+    except Exception as e:  # se a JustWatch cair, fica a lista anterior
+        print(f"  ✗ streaming: {e}")
     try:
         ig = coletar_igreja()
         ig["updatedAt"] = agora

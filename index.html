@@ -19,7 +19,7 @@
   --bg:#FFFFFF; --band:#EEEEEE; --ink:#111111; --muted:#666666; --line:#E2E2E2;
   --dot:#E0201B;
   --c-corinthians:#111111; --c-esportes:#0E8A4F; --c-saude:#C8325E; --c-tecnologia:#1E62D6; --c-ia:#7A3FE0;
-  --c-ciencia:#3F4FD1; --c-games:#E07A10; --c-pop:#D1338F; --c-cinema:#B8860B; --c-clima:#0A8BAE; --c-obituario:#4B5568; --c-podcasts:#0F766E; --c-igreja:#1B3A5C; --c-ccxp:#F2B705;
+  --c-ciencia:#3F4FD1; --c-games:#E07A10; --c-pop:#D1338F; --c-cinema:#B8860B; --c-clima:#0A8BAE; --c-obituario:#4B5568; --c-podcasts:#0F766E; --c-igreja:#1B3A5C; --c-ccxp:#F2B705; --c-streaming:#E50914;
   --display:"Archivo","Helvetica Neue",Arial,sans-serif;
   --body:"Source Sans 3","Helvetica Neue",Arial,sans-serif;
   --soft:#333333; --rowhl:#F3F3F3; --readc:#7a7a7a; --hdline:transparent;
@@ -151,7 +151,7 @@ a:hover h1,a:hover h2,a:hover h3,a:hover .t{text-decoration:underline;text-under
   .cine-hero .in{grid-template-columns:180px minmax(0,1fr);padding-block:40px}
   .cine-hero .poster{width:180px}
   .cine-hero p{grid-column:2;-webkit-line-clamp:4}
-  .btns{grid-column:2}
+  .cine-hero .btns{grid-column:2}
   .rail{grid-auto-columns:150px}
   .people{grid-template-columns:1fr 1fr}
 }
@@ -259,6 +259,10 @@ table.tab{width:100%;border-collapse:collapse;font-size:14px}
 .ccxp-faixa b{font-family:var(--display);font-size:20px;color:var(--c-ccxp)}
 .ccxp-faixa span{font-size:14px;color:#ddd}
 .ccxp-faixa em{margin-left:auto;font-style:normal;font:700 14px var(--body)}
+/* Streaming */
+.movie .pst .sv{position:absolute;left:6px;bottom:6px;background:rgba(0,0,0,.78);color:#fff;font:700 10px var(--body);padding:2px 6px;border-radius:3px}
+.st-hero{background:#111}
+.st-hero .kicker{color:#FF4D57}
 footer{font-size:13px;color:var(--muted);padding-block:6px 24px}
 </style>
 </head>
@@ -313,6 +317,7 @@ const CATS=[
   {id:"ciencia",label:"Ciência"},
   {id:"games",label:"Games"},
   {id:"cinema",label:"Cinema"},
+  {id:"streaming",label:"Streaming"},
   {id:"pop",label:"Pop"},
   {id:"clima",label:"Clima"},
 ];
@@ -489,6 +494,7 @@ function renderHome(){
     return;
   }
   if(view==="cinema"){renderCinema(home,all);return}
+  if(view==="streaming"){renderStreaming(home,all);return}
   if(view!=="capa"){
     const list=all.filter(i=>i.cat===view);
     if(view==="igreja"){renderIgreja(home);return}
@@ -564,7 +570,7 @@ function openMovie(f,autoplay=false){
   else if(f.wide){const w=el("div","wide");w.appendChild(img(f.wide));d.appendChild(w)}
   const body=el("div","body");
   body.appendChild(el("h2",null,f.t));
-  const facts=[f.data&&diasAte(f.data)>=0?"Estreia "+fmtDia(f.data):null,(f.gen||[]).join(", "),f.min?f.min+" min":null,f.class].filter(Boolean).join(" · ");
+  const facts=[f.serv?(f.serie?"Série":"Filme")+" · "+f.serv:null,f.data&&diasAte(f.data)>=0?"Estreia "+fmtDia(f.data):null,f.serv&&f.data&&diasAte(f.data)<0?"Chegou "+fmtDia(f.data):null,f.ano,(f.gen||[]).join(", "),f.min?f.min+" min":null,f.class].filter(Boolean).join(" · ");
   body.appendChild(el("div","facts",facts));
   if(f.sin)body.appendChild(el("p",null,f.sin));
   const dl=el("dl");[["Direção",f.dir],["Elenco",f.elenco],["Título original",f.orig!==f.t?f.orig:""],["País",f.pais]].forEach(([k,v])=>{if(v){dl.appendChild(el("dt",null,k));dl.appendChild(el("dd",null,v))}});
@@ -572,7 +578,7 @@ function openMovie(f,autoplay=false){
   const bt=el("div","btns");
   if(id&&!autoplay){const t=el("button","btn pri","▶ Ver trailer");t.type="button";t.onclick=()=>openMovie(f,true);bt.appendChild(t)}
   if(id&&autoplay){const y=el("a","btn pri","▶ Ver no YouTube");y.href=`https://www.youtube.com/watch?v=${id}`;y.target="_blank";y.rel="noopener";bt.appendChild(y)}
-  const a=el("a","btn sec",f.pre||f.salas?"Ingressos e horários":"Ver na Ingresso.com");a.href=f.u;a.target="_blank";a.rel="noopener noreferrer";bt.appendChild(a);
+  const a=el("a","btn sec",f.btn||(f.pre||f.salas?"Ingressos e horários":"Ver na Ingresso.com"));a.href=f.u;a.target="_blank";a.rel="noopener noreferrer";bt.appendChild(a);
   body.appendChild(bt);d.appendChild(body);
   if(!d.open)d.showModal();
 }
@@ -742,6 +748,56 @@ async function loadTempo(pedir=false){
 }
 $("#wx").addEventListener("click",()=>{const o=$("#wxbox").classList.toggle("open");$("#wx").setAttribute("aria-expanded",String(o))});
 
+// ===== Streaming (streaming.json, da JustWatch) =====
+let stream=null, stServ="Todos";
+const stFicha=f=>({...f,btn:`Onde assistir · ${f.serv}`});
+function stCard(f,{data=false}={}){
+  const b=el("button","movie");b.type="button";b.setAttribute("aria-label",f.t);
+  const p=el("div","pst");if(f.poster)p.appendChild(img(f.poster));
+  if(data&&f.data)p.appendChild(el("span","d",curto(f.data)));
+  p.appendChild(el("span","sv",f.serv));
+  b.appendChild(p);b.appendChild(el("b",null,f.t));b.appendChild(el("small",null,[(f.serie?"Série":"Filme"),...(f.gen||[]).slice(0,1)].join(" · ")));
+  b.onclick=()=>openMovie(stFicha(f));return b;
+}
+function stRail(lista,titulo,opts){
+  if(!lista.length)return null;
+  const b=el("section","block pad");b.style.setProperty("--c","var(--c-streaming)");
+  b.appendChild(el("div","ed",titulo));const r=el("div","rail");lista.forEach(f=>r.appendChild(stCard(f,opts)));b.appendChild(r);return b;
+}
+function renderStreaming(home,all){
+  if(!stream){home.appendChild(emptyBox("Carregando os streamings…",""));return}
+  const filtra=l=>stServ==="Todos"?l:l.filter(f=>f.serv===stServ);
+  const novos=filtra(stream.novos||[]),breve=filtra(stream.breve||[]),alta=filtra(stream.alta||[]);
+  // destaque: o mais comentado da semana que tenha trailer e imagem larga
+  const f=[...alta,...novos].find(x=>x.trailer&&x.wide)||alta[0]||novos[0];
+  if(f){
+    const s=el("section","cine-hero st-hero");s.appendChild(Object.assign(img(f.wide||f.poster),{className:"bgimg"}));
+    const inn=el("div","in col pad");const pp=el("div","poster");if(f.poster)pp.appendChild(img(f.poster,f.t));inn.appendChild(pp);
+    const tx=el("div");tx.style.minWidth="0";tx.appendChild(el("div","kicker",`Em alta · ${f.serv}`));tx.appendChild(el("h1",null,f.t));
+    tx.appendChild(el("div","sub",[(f.serie?"Série":"Filme"),...(f.gen||[])].join(" · ")));inn.appendChild(tx);
+    if(f.sin)inn.appendChild(el("p",null,f.sin));
+    const bt=el("div","btns");
+    if(f.trailer){const t=el("button","btn pri","▶ Ver trailer");t.type="button";t.onclick=()=>openMovie(stFicha(f),true);bt.appendChild(t)}
+    const m=el("button","btn sec","Sinopse e onde assistir");m.type="button";m.onclick=()=>openMovie(stFicha(f));bt.appendChild(m);
+    inn.appendChild(bt);s.appendChild(inn);home.appendChild(s);
+  }
+  // filtro por serviço
+  const fb=el("section","block pad");fb.style.setProperty("--c","var(--c-streaming)");fb.appendChild(el("div","ed","Escolha o streaming"));
+  const tabs=el("div","tabs");const servs=["Todos",...new Set([...(stream.alta||[]),...(stream.novos||[]),...(stream.breve||[])].map(x=>x.serv))];
+  servs.forEach(sv=>{const t=el("button",null,sv);t.type="button";t.setAttribute("aria-pressed",String(stServ===sv));t.onclick=()=>{stServ=sv;renderHome()};tabs.appendChild(t)});
+  fb.appendChild(tabs);home.appendChild(fb);
+  [stRail(breve,"Estreias que vêm aí",{data:true}),
+   stRail(novos.filter(x=>x.serie),"Séries novas da semana"),
+   stRail(novos.filter(x=>!x.serie),"Filmes novos da semana"),
+   stRail(alta,"Em alta agora")].forEach(b=>b&&home.appendChild(b));
+  if(!novos.length&&!breve.length&&!alta.length)home.appendChild(emptyBox(`Nada novo em ${stServ} esta semana`,"Escolha outro streaming."));
+  const noticias=all.filter(i=>i.serie||(i.cat==="pop"||i.cat==="cinema")&&/netflix|prime video|disney\+|hbo max|globoplay|apple tv|paramount\+|streaming|série|temporada/i.test(i.t));
+  if(noticias.length)home.appendChild(grid(noticias.slice(0,15),"Notícias de séries e streaming","cinema"));
+}
+async function loadStreaming(){
+  try{const r=await fetch("streaming.json?t="+Date.now(),{cache:"no-store"});stream=await r.json();if(view==="streaming")renderHome()}catch{}
+}
+
 // ===== CCXP =====
 function ccxpConta(){
   const agora=Date.now(),dias=Math.ceil((CCXP.ini-new Date(new Date().toDateString()))/864e5);
@@ -838,15 +894,15 @@ async function load(){
     const r=await fetch("news.json?t="+Date.now(),{cache:"no-store"});
     const d=await r.json();
     items=d.items.filter(i=>i.t&&i.u&&i.ts&&i.cat).sort((a,b)=>b.ts-a.ts);
-    if(d.updatedAt)$("#foot").textContent=`Atualizado ${new Date(d.updatedAt).toLocaleString("pt-BR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}. Fontes: ge, g1, UOL, Agência Brasil, Olhar Digital, Canaltech, IGN, Veja Saúde, Drauzio Varella, Superinteressante, MetSul, BBC, Meu Timão, Cinepop, Pipoca Moderna, Observatório do Cinema, Filme B, Google Notícias (CCXP), Ingresso.com, ESPN (jogos e tabela), app da Lugar do Encontro e Open-Meteo (tempo). Toque numa manchete para ler no site original.`;
+    if(d.updatedAt)$("#foot").textContent=`Atualizado ${new Date(d.updatedAt).toLocaleString("pt-BR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}. Fontes: ge, g1, UOL, Agência Brasil, Olhar Digital, Canaltech, IGN, Veja Saúde, Drauzio Varella, Superinteressante, MetSul, BBC, Meu Timão, Cinepop, Pipoca Moderna, Observatório do Cinema, Filme B, Google Notícias (CCXP), Ingresso.com, JustWatch (streaming), ESPN (jogos e tabela), app da Lugar do Encontro e Open-Meteo (tempo). Toque numa manchete para ler no site original.`;
     renderHome();
   }catch(e){
     if(!items.length){const st=$("#status");st.innerHTML="";st.appendChild(el("strong",null,"Não deu para abrir a capa"));st.append("Confira a conexão e tente de novo.")}
   }
 }
-load();loadCinema();loadTimao();loadTempo();loadIgreja();
+load();loadCinema();loadTimao();loadTempo();loadIgreja();loadStreaming();
 // voltou ao app depois de um tempo: busca a capa nova
-let hiddenAt=0;document.addEventListener("visibilitychange",()=>{if(document.hidden)hiddenAt=Date.now();else if(Date.now()-hiddenAt>30*60e3){load();loadCinema();loadTimao();loadTempo();loadIgreja()}});
+let hiddenAt=0;document.addEventListener("visibilitychange",()=>{if(document.hidden)hiddenAt=Date.now();else if(Date.now()-hiddenAt>30*60e3){load();loadCinema();loadTimao();loadTempo();loadIgreja();loadStreaming()}});
 </script>
 </body>
 </html>

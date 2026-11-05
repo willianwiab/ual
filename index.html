@@ -436,9 +436,15 @@ function go(id){view=id;history.replaceState(null,"",id==="capa"?location.pathna
 // Manchete principal + 3 destaques ao lado (um de cada editoria)
 function hero(all){
   const picks=[],used=new Set();
-  // Corinthians fica fora da manchete (tem bloco e aba próprios); até 06/12 a manchete é da CCXP
-  const order=[...(emCCXP()?["ccxp"]:[]),"ciencia","tecnologia","saude","ia","esportes","pop","games","clima"];
-  for(const c of order){const i=all.find(x=>x.cat===c&&x.img&&!used.has(x.id));if(i){picks.push(i);used.add(i.id)}if(picks.length===4)break}
+  // A manchete troca todo dia: só entra notícia das últimas 24 h, e a editoria que abre a capa gira dia a dia.
+  // Corinthians fica fora (tem bloco e aba próprios). Até 06/12 a CCXP abre a capa, mas só se tiver notícia do dia.
+  const fresca=x=>Date.now()-x.ts<24*36e5, diaN=Math.floor((Date.now()-3*36e5)/864e5);
+  const giro=["ciencia","tecnologia","saude","ia","esportes","cinema","pop","games","clima"];
+  const order=[...(emCCXP()?["ccxp"]:[]),...giro.slice(diaN%giro.length),...giro.slice(0,diaN%giro.length)];
+  for(const so of [fresca,()=>true]){ // primeiro só as do dia; se faltar, completa com as mais recentes
+    for(const c of order){if(picks.length===4)break;if(picks.some(x=>x.cat===c))continue;const i=all.find(x=>x.cat===c&&x.img&&!used.has(x.id)&&so(x));if(i){picks.push(i);used.add(i.id)}}
+  }
+  if(picks[0]&&picks[0].cat==="ccxp"&&!fresca(picks[0]))picks.push(picks.shift()); // CCXP velha não fica no topo
   if(!picks.length)return null;
   const s=el("section","hero pad");
   const [top,...rest]=picks;

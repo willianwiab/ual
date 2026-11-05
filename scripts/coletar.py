@@ -65,7 +65,9 @@ POLITICA = ["lula", "bolsonaro", "bolsonarista*", "bolsonaris*", "lulis*", "peti
             "guerra*", "hamas", "gaza", "ucrânia", "israel", "irã", "ataque*", "sanç*", "otan", "pf",
             "polícia federal", "ministério", "sarney", "dilma", "temer", "ciro gomes", "marina silva"]
 # notícia ruim que não é obituário nem clima
-RUIM = ["mpox", "varíola dos macacos", "surto*", "epidemia*", "pandemia*", "casos? de", "casos? confirmados?",
+RUIM = ["esmag*", "desab[oa]*", "soterrad*", "injeção letal", "pena de morte", "executad[oa]s?", "execução",
+        "golpes?", "golpistas?", "fraudes?", "vírus", "malware", "ciberataques?", "ataque hacker", "hackers?", "vazamentos?",
+        "mpox", "varíola dos macacos", "surto*", "epidemia*", "pandemia*", "casos? de", "casos? confirmados?",
         "primeiro caso", "infectad[oa]s?", "contaminad[oa]s?", "óbitos?", "internad[oa]s?",
         "assassin*", "homicídio*", "estupr*", "tiroteio*", "baleado*", "a tiros", "chacina*", "esfaque*",
         "sequestr*", "assalt*", "roub*", "furt*", "tráfico", "facç*", "pres[oa]s?", "prisão", "polícia*",

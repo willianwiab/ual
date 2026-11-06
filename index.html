@@ -277,6 +277,16 @@ table.tab{width:100%;border-collapse:collapse;font-size:14px}
 .placar i{font-style:normal;color:#999}
 .placar small{grid-column:1/-1;text-align:center;font:600 12px var(--body);color:#bbb}
 @media (max-width:419px){.date{display:none}.wx{margin-left:auto}}
+/* ===== Ual há 10 anos ===== */
+.ano{all:unset;cursor:pointer;flex:none;height:30px;padding:0 10px;border-radius:999px;background:#5A4632;color:#F3E3C3;font:800 12px var(--display);display:grid;place-items:center;letter-spacing:.02em}
+.anos .top{background:#2B2117}
+.anos .ano{background:#F3E3C3;color:#2B2117}
+.anos .thumb img,.anos .st-foto img{filter:sepia(.35) contrast(1.05) saturate(.9)}
+.faixa10{background:#F3E3C3;color:#2B2117;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-block:12px;border-left:6px solid #8A6A42}
+.faixa10 b{font-family:var(--display);font-size:18px}
+.faixa10 button{margin-left:auto;font:700 14px var(--body);border:0;border-radius:999px;padding:8px 14px;background:#2B2117;color:#F3E3C3;cursor:pointer}
+:root[data-theme="dark"] .faixa10{background:#3A2E20;color:#F3E3C3}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .faixa10{background:#3A2E20;color:#F3E3C3}}
 /* ===== Stories ===== */
 .hoje{all:unset;cursor:pointer;width:34px;height:34px;border-radius:50%;padding:2px;background:conic-gradient(#F2B705,#E0201B,#B23AE0,#F2B705);display:grid;place-items:center;flex:none}
 .hoje span{width:100%;height:100%;border-radius:50%;background:#111;border:2px solid #111;display:grid;place-items:center;font:800 9px var(--display);color:#fff;letter-spacing:.02em;text-transform:uppercase}
@@ -313,6 +323,7 @@ footer{font-size:13px;color:var(--muted);padding-block:6px 24px}
     <div class="bar">
       <div class="logo" id="logo" role="link" tabindex="0" aria-label="Voltar à capa">Ual<i>.</i></div>
       <button class="hoje" id="hoje" type="button" aria-label="Ver os destaques de hoje"><span>Hoje</span></button>
+      <button class="ano" id="ano" type="button" hidden></button>
       <div class="date" id="date"></div>
       <button class="wx" id="wx" type="button" aria-expanded="false" aria-controls="wxbox" aria-label="Tempo em São Paulo"></button>
       <button class="search" id="tema" type="button" aria-label="Versão escura"></button>
@@ -378,7 +389,12 @@ $("#date").textContent=new Date().toLocaleDateString("pt-BR",{weekday:"short",da
 const norm=s=>" "+s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"")+" ";
 const bad=t=>{const s=norm(t);return POLITICA.some(w=>s.includes(norm(w).trim()))||blocked.some(w=>s.includes(norm(w).trim()))};
 const ok=()=>items.filter(i=>!bad(i.t)&&!mute.ids.includes(i.id)&&!mute.src.includes(i.src)&&(!query||norm(i.t+" "+(i.d||"")).includes(norm(query).trim())));
-function ago(ts){const m=Math.round((Date.now()-ts)/60000);if(m<60)return `há ${Math.max(m,1)} min`;const h=Math.round(m/60);if(h<24)return `há ${h} h`;return new Date(ts).toLocaleDateString("pt-BR",{day:"numeric",month:"short"})}
+// ===== Ual há 10 anos: o portal inteiro volta para o mesmo dia de 10 anos atrás =====
+let modo10=false, ha10=null, itensHoje=[];
+const AGORA=()=>modo10&&ha10?new Date(ha10.alvo+"T23:59:00-03:00").getTime():Date.now();
+function ago(ts){
+  if(modo10)return new Date(ts).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}).replace(/\./g,"");
+  const m=Math.round((Date.now()-ts)/60000);if(m<60)return `há ${Math.max(m,1)} min`;const h=Math.round(m/60);if(h<24)return `há ${h} h`;return new Date(ts).toLocaleDateString("pt-BR",{day:"numeric",month:"short"})}
 function hash(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
@@ -479,12 +495,12 @@ function go(id){view=id;history.replaceState(null,"",id==="capa"?location.pathna
 // Manchete principal + 3 destaques ao lado (um de cada editoria)
 // Relevância do dia: quantos sites deram a mesma notícia (o coletor junta em "alt"), quão recente é e se tem foto
 function relevancia(i){
-  const h=(Date.now()-i.ts)/36e5;
+  const h=(AGORA()-i.ts)/36e5;
   return 3*(1+(i.alt?.length||0))+Math.max(0,24-h)/8+(i.img?1.5:0);
 }
 function maisRelevantes(all,{n=12,porCat=2,fora=[]}={}){
   for(const horas of [24,48,96]){ // do dia; se o dia estiver fraco, amplia a janela
-    const cand=all.filter(i=>Date.now()-i.ts<horas*36e5&&!fora.includes(i.cat)).sort((a,b)=>relevancia(b)-relevancia(a));
+    const cand=all.filter(i=>AGORA()-i.ts<horas*36e5&&!fora.includes(i.cat)).sort((a,b)=>relevancia(b)-relevancia(a));
     const out=[],conta={};
     for(const i of cand){if((conta[i.cat]||0)>=porCat)continue;conta[i.cat]=(conta[i.cat]||0)+1;out.push(i);if(out.length===n)break}
     if(out.length>=Math.min(n,8))return out;
@@ -493,6 +509,7 @@ function maisRelevantes(all,{n=12,porCat=2,fora=[]}={}){
 }
 // Noite de jogo do Timão: do apito final até as 6h do dia seguinte, o resultado vira a manchete
 function jogoDaNoite(){
+  if(modo10){const j=ha10?.jogo;return j&&AGORA()-new Date(j.data).getTime()<36*36e5?j:null}
   const j=timao?.ultimos?.[0];if(!j?.fim)return null;
   const ini=new Date(j.data).getTime(),fimJanela=new Date(new Date(ini-3*36e5).toISOString().slice(0,10)+"T09:00:00Z").getTime()+864e5; // 6h SP do dia seguinte
   return Date.now()>ini&&Date.now()<fimJanela?j:null;
@@ -554,7 +571,8 @@ function grid(list,label,cat){
 
 function renderNav(){
   const nav=$("#nav");nav.innerHTML="";
-  for(const c of CATS){const b=el("button",null,c.label);b.type="button";b.id="nav-"+c.id;b.setAttribute("aria-pressed",String(view===c.id));b.onclick=()=>go(c.id);nav.appendChild(b)}
+  const tem=new Set(items.map(i=>i.cat));
+  for(const c of CATS){if(modo10&&c.id!=="capa"&&!tem.has(c.id))continue;const b=el("button",null,c.label);b.type="button";b.id="nav-"+c.id;b.setAttribute("aria-pressed",String(view===c.id));b.onclick=()=>go(c.id);nav.appendChild(b)}
   $("#nav-"+view)?.scrollIntoView({block:"nearest",inline:"nearest"});
 }
 function emptyBox(t,s){const e=el("div","empty pad");e.appendChild(el("strong",null,t));e.append(s);return e}
@@ -567,32 +585,37 @@ function renderHome(){
     home.appendChild(all.length?grid(all.slice(0,60),`Busca: “${query}” (${all.length})`):emptyBox("Nada encontrado","Tente outra palavra."));
     return;
   }
-  if(view==="cinema"){renderCinema(home,all);return}
-  if(view==="streaming"){renderStreaming(home,all);return}
+  if(modo10)home.appendChild(faixa10());
+  if(view==="cinema"&&!modo10){renderCinema(home,all);return}
+  if(view==="streaming"&&!modo10){renderStreaming(home,all);return}
   if(view!=="capa"){
     const list=all.filter(i=>i.cat===view);
     if(view==="igreja"){renderIgreja(home);return}
     if(view==="ccxp"){renderCCXP(home,list);return}
-    if(view==="corinthians"){const t=timaoPanel();if(t)home.appendChild(t)}
+    if(view==="corinthians"&&!modo10){const t=timaoPanel();if(t)home.appendChild(t)}
+    if(view==="corinthians"&&modo10&&ha10?.jogo)home.appendChild(placar10(ha10.jogo));
     home.appendChild(list.length?grid(list,LABEL[view],view):emptyBox("Nada nesta editoria agora","Volte mais tarde."));
     return;
   }
   const h=hero(all);
   if(h)home.appendChild(h.node);
   const rest=all.filter(i=>!h||!h.used.has(i.id));
-  if(emCCXP()){const f=ccxpFaixa();home.appendChild(f)} // contagem da CCXP logo abaixo da manchete
-  const ig=igrejaBloco(true);if(ig)home.appendChild(ig); // próximos eventos da igreja logo abaixo da manchete
+  if(!modo10){
+    if(emCCXP()){const f=ccxpFaixa();home.appendChild(f)} // contagem da CCXP logo abaixo da manchete
+    const ig=igrejaBloco(true);if(ig)home.appendChild(ig); // próximos eventos da igreja logo abaixo da manchete
+  }
   let pair=null;
   for(const c of CATS.slice(1)){
     let list=rest.filter(i=>i.cat===c.id);if(!list.length)continue;
     if(c.id==="ccxp")list=[...list.filter(i=>i.img),...list.filter(i=>!i.img)]; // destaque da CCXP sempre com foto
     const big=c.id==="corinthians"||c.id==="esportes"||c.id==="cinema"||c.id==="ccxp";
     const b=block(list,{label:c.label,cat:c.id,max:big?6:4,showMore:true});
-    if(c.id==="corinthians"&&timao?.proximos?.length){ // na capa, o próximo jogo logo abaixo do nome
+    if(c.id==="corinthians"&&modo10&&ha10?.jogo){const j=ha10.jogo,l=el("p","prox-linha");l.append("Naquela semana: ");l.appendChild(el("b",null,`${j.mandante} ${j.casa?j.nos:j.eles} × ${j.casa?j.eles:j.nos} ${j.visitante}`));l.append(` · ${j.comp}`);b.insertBefore(l,b.children[1])}
+    else if(c.id==="corinthians"&&timao?.proximos?.length){ // na capa, o próximo jogo logo abaixo do nome
       const j=timao.proximos[0],l=el("p","prox-linha");l.append("Próximo jogo: ");l.appendChild(el("b",null,`${j.mandante} x ${j.visitante}`));l.append(` · ${quando(j.data)} · ${j.comp}`);
       b.insertBefore(l,b.children[1]);
     }
-    if(c.id==="cinema"){ // na capa, o bloco de cinema mostra as estreias da semana
+    if(c.id==="cinema"&&!modo10){ // na capa, o bloco de cinema mostra as estreias da semana
       const est=(cine?.estreias||[]).filter(f=>diasAte(f.data)<=7);
       if(est.length){const r=el("div","rail");est.forEach(f=>r.appendChild(movieCard(f)));const lb=el("div","daylbl","Estreias da semana");lb.style.textTransform="none";b.insertBefore(lb,b.children[1]);b.insertBefore(r,b.children[2])}
       b.querySelector(".more")?.replaceChildren("Página de Cinema ›");
@@ -918,7 +941,7 @@ function abrirStories(k=0){
   // não deixa duas da mesma editoria seguidas (fica mais variado, como os stories de amigos diferentes)
   for(let n=1;n<st.lista.length;n++)if(st.lista[n].cat===st.lista[n-1].cat){const t=st.lista.findIndex((x,m)=>m>n&&x.cat!==st.lista[n-1].cat);if(t>0)st.lista.splice(n,0,st.lista.splice(t,1)[0])}
   const box=$("#stories");box.innerHTML="";box.classList.add("open");document.body.style.overflow="hidden";
-  ls.set("storiesDia",hojeStr());$("#hoje").classList.add("visto");
+  if(!modo10){ls.set("storiesDia",hojeStr());$("#hoje").classList.add("visto")}
   const fr=el("div","st-frame");box.appendChild(fr);
   const bars=el("div","st-bars");st.lista.forEach(()=>{const i=el("i");i.appendChild(el("b"));bars.appendChild(i)});fr.appendChild(bars);
   mostrarStory(k);
@@ -962,6 +985,35 @@ function tick(){
   document.addEventListener("visibilitychange",()=>{st.pausa=document.hidden});
 })();
 $("#hoje").addEventListener("click",()=>abrirStories(0));
+const dataLonga=s=>new Date(s+"T12:00:00-03:00").toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+function faixa10(){
+  const f=el("div","faixa10 pad");f.appendChild(el("span",null,"⏳ Você está em"));f.appendChild(el("b",null,dataLonga(ha10.alvo)));
+  const v=el("button",null,"Voltar para hoje");v.type="button";v.onclick=()=>sair10();f.appendChild(v);return f;
+}
+function placar10(j){
+  const b=el("section","block pad");b.style.setProperty("--c","var(--c-corinthians)");b.appendChild(el("div","ed","O jogo do Timão naquela semana"));
+  const pl=el("div","placar");const casa=j.casa;
+  const lado=(nome,logo)=>{const d=el("span","pl-t");if(logo)d.appendChild(img(logo,nome));d.append(nome);return d};
+  pl.append(lado(casa?"Corinthians":j.adv,casa?LOGO_SCCP:j.advLogo),el("b",null,casa?j.nos:j.eles),el("i",null,"×"),el("b",null,casa?j.eles:j.nos),lado(casa?j.adv:"Corinthians",casa?j.advLogo:LOGO_SCCP),el("small",null,`${j.comp} · ${new Date(j.data).toLocaleDateString("pt-BR",{timeZone:"America/Sao_Paulo",day:"numeric",month:"long",year:"numeric"})}`));
+  b.appendChild(pl);return b;
+}
+function entrar10(){
+  if(!ha10?.items?.length)return;
+  modo10=true;itensHoje=items;items=ha10.items.filter(i=>i.t&&i.u&&i.ts&&i.cat).sort((a,b)=>b.ts-a.ts);
+  document.documentElement.classList.add("anos");$("#date").textContent=new Date(ha10.alvo+"T12:00:00-03:00").toLocaleDateString("pt-BR",{weekday:"short",day:"numeric",month:"short",year:"numeric"});$("#ano").textContent="Hoje";$("#ano").setAttribute("aria-label","Voltar para hoje");
+  view="capa";history.replaceState(null,"",location.pathname);render();scrollTo({top:0});
+  $("#foot").textContent=`Notícias de ${dataLonga(ha10.alvo)}, como estavam no g1, no ge e no TechTudo (lista de matérias guardada pelo Internet Archive). Toque numa manchete para ler a matéria original.`;
+}
+function sair10(){
+  modo10=false;items=itensHoje;document.documentElement.classList.remove("anos");pintaAno();
+  $("#date").textContent=new Date().toLocaleDateString("pt-BR",{weekday:"short",day:"numeric",month:"short"});
+  view="capa";render();scrollTo({top:0});load();
+}
+function pintaAno(){const b=$("#ano");if(!ha10?.items?.length){b.hidden=true;return}b.hidden=false;b.textContent=ha10.alvo.slice(0,4);b.setAttribute("aria-label",`Ver o Ual de ${dataLonga(ha10.alvo)}`)}
+$("#ano").addEventListener("click",()=>modo10?sair10():entrar10());
+async function loadHa10(){
+  try{const r=await fetch("ha10.json?t="+Date.now(),{cache:"no-store"});ha10=await r.json();if(!modo10)pintaAno()}catch{}
+}
 if(ls.get("storiesDia","")===hojeStr())$("#hoje").classList.add("visto");
 
 // ===== Tema claro/escuro =====
@@ -1027,7 +1079,9 @@ async function load(){
   try{
     const r=await fetch("news.json?t="+Date.now(),{cache:"no-store"});
     const d=await r.json();
-    items=d.items.filter(i=>i.t&&i.u&&i.ts&&i.cat).sort((a,b)=>b.ts-a.ts);
+    const novos=d.items.filter(i=>i.t&&i.u&&i.ts&&i.cat).sort((a,b)=>b.ts-a.ts);
+    if(modo10){itensHoje=novos;return} // está em 2016: guarda as de hoje para a volta
+    items=novos;
     if(d.updatedAt)$("#foot").textContent=`Atualizado ${new Date(d.updatedAt).toLocaleString("pt-BR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}. Fontes: ge, g1, UOL, Agência Brasil, Olhar Digital, Canaltech, IGN, Veja Saúde, Drauzio Varella, Superinteressante, MetSul, BBC, Meu Timão, Cinepop, Pipoca Moderna, Observatório do Cinema, Filme B, Google Notícias (CCXP), Ingresso.com, JustWatch (streaming), ESPN (jogos e tabela), app da Lugar do Encontro e Open-Meteo (tempo). Toque numa manchete para ler no site original.`;
     renderHome();
     if(view==="capa"&&!location.hash&&ls.get("storiesDia","")!==hojeStr()&&!$("#stories").classList.contains("open"))abrirStories(0);
@@ -1035,7 +1089,7 @@ async function load(){
     if(!items.length){const st=$("#status");st.innerHTML="";st.appendChild(el("strong",null,"Não deu para abrir a capa"));st.append("Confira a conexão e tente de novo.")}
   }
 }
-load();loadCinema();loadTimao();loadTempo();loadIgreja();loadStreaming();
+load();loadCinema();loadTimao();loadTempo();loadIgreja();loadStreaming();loadHa10();
 // voltou ao app depois de um tempo: busca a capa nova
 let hiddenAt=0;document.addEventListener("visibilitychange",()=>{if(document.hidden)hiddenAt=Date.now();else if(Date.now()-hiddenAt>30*60e3){load();loadCinema();loadTimao();loadTempo();loadIgreja();loadStreaming()}});
 </script>

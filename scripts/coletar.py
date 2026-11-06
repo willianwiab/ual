@@ -9,9 +9,10 @@ import html
 import json
 import re
 import time
+import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -65,7 +66,7 @@ POLITICA = ["lula", "bolsonaro", "bolsonarista*", "bolsonaris*", "lulis*", "peti
             "guerra*", "hamas", "gaza", "ucrânia", "israel", "irã", "ataque*", "sanç*", "otan", "pf",
             "polícia federal", "ministério", "sarney", "dilma", "temer", "ciro gomes", "marina silva"]
 # notícia ruim que não é obituário nem clima
-RUIM = ["esmag*", "desab[oa]*", "soterrad*", "injeção letal", "pena de morte", "executad[oa]s?", "execução",
+RUIM = ["odebrecht", "lava jato", "propinas?", "corrupção", "sangrent[oa]s?", "tragédias?", "acidentes? aéreos?", "queda do avião", "vítimas?", "esmag*", "desab[oa]*", "soterrad*", "injeção letal", "pena de morte", "executad[oa]s?", "execução",
         "golpes?", "golpistas?", "fraudes?", "vírus", "malware", "ciberataques?", "ataque hacker", "hackers?", "vazamentos?",
         "mpox", "varíola dos macacos", "surto*", "epidemia*", "pandemia*", "casos? de", "casos? confirmados?",
         "primeiro caso", "infectad[oa]s?", "contaminad[oa]s?", "óbitos?", "internad[oa]s?",
@@ -531,6 +532,125 @@ def coletar_streaming():
     return out
 
 
+# ===== Ual há 10 anos =====
+# O Internet Archive diz quais matérias existiam naquele dia (CDX); título, foto e data vêm da própria página,
+# que o g1, o ge e o TechTudo mantêm no ar até hoje. O Archive limita pedidos: vai devagar e tenta de novo.
+SECOES_10 = [
+    ("globoesporte.globo.com/futebol/times/corinthians/noticia/{a}/{m}/", "ge", "corinthians"),
+    ("globoesporte.globo.com/futebol/brasileirao-serie-a/noticia/{a}/{m}/", "ge", "esportes"),
+    ("globoesporte.globo.com/futebol/noticia/{a}/{m}/", "ge", "esportes"),
+    ("techtudo.com.br/noticias/noticia/{a}/{m}/", "TechTudo", "tecnologia"),
+    ("g1.globo.com/tecnologia/noticia/{a}/{m}/", "g1", "tecnologia"),
+    ("g1.globo.com/tecnologia/games/noticia/{a}/{m}/", "g1", "games"),
+    ("g1.globo.com/ciencia-e-saude/noticia/{a}/{m}/", "g1", "saude"),
+    ("g1.globo.com/bemestar/noticia/{a}/{m}/", "g1", "saude"),
+    ("g1.globo.com/natureza/noticia/{a}/{m}/", "g1", "ciencia"),
+    ("g1.globo.com/pop-arte/noticia/{a}/{m}/", "g1", "pop"),
+    ("g1.globo.com/pop-arte/cinema/noticia/{a}/{m}/", "g1", "cinema"),
+]
+
+
+def archive(url):
+    for n in range(4):
+        time.sleep(3)
+        try:
+            return baixar(url, timeout=60)[0].decode("utf-8", "ignore")
+        except urllib.error.HTTPError as e:
+            if e.code not in (429, 502, 503, 504):
+                raise
+            time.sleep(20 * (n + 1))
+    return ""
+
+
+def dia_ha_10_anos():
+    hoje = datetime.now(timezone.utc).astimezone(timezone(-timedelta(hours=3))).date()
+    try:
+        return hoje.replace(year=hoje.year - 10)
+    except ValueError:  # 29 de fevereiro
+        return hoje.replace(year=hoje.year - 10, day=28)
+
+
+def materia_antiga(u, padrao, fonte, ini, fim):
+    """Lê título/foto/data na página de hoje da matéria antiga; só fica se foi publicada naquele dia."""
+    try:
+        pg = baixar(u, timeout=15)[0][:400_000].decode("utf-8", "ignore")
+    except Exception:
+        return None
+    meta = lambda k: (re.search(rf'(?:property|name|itemprop)="{k}"[^>]*content="([^"]+)"', pg) or [None, None])[1]
+    limpa = lambda t: re.sub(r"\s*\|\s*(Notícias|TechTudo|g1|ge|globoesporte).*$", "", re.sub(r"\s+", " ", html.unescape(t))).strip()
+    titulo, desc = limpa(meta("og:title") or ""), limpa(meta("og:description") or "")
+    quando = (meta("article:published_time") or meta("datePublished")
+              or (re.search(r'datePublished"[^>]*?datetime="([^"]+)"', pg) or [None, None])[1]
+              or (re.search(r'"datePublished"\s*:\s*"([^"]+)"', pg) or [None, None])[1]
+              or ((re.search(r'(\d{4}-\d\d-\d\dT\d\d:\d\d)', pg) or [None, None])[1] or "") + ("-03:00" if re.search(r'\d{4}-\d\d-\d\dT\d\d:\d\d', pg) else ""))
+    ts = data_ts(quando.replace(" ", "T", 1))
+    if not titulo or not ts or not (ini <= ts < fim):
+        return None
+    cat = classificar(titulo, desc, padrao)
+    if not cat:
+        return None
+    img = meta("og:image")
+    if not img or re.search(r"/static/|logo-(globo|g1|ge|techtudo)", img):  # ge antigo: o og:image é o logo; pega a 1ª foto da matéria
+        m = re.search(r'(https://s\d?\.glbimg\.com/[^"\s]+?\.(?:jpe?g|png))', pg[pg.find("<body"):] if "<body" in pg else pg)
+        img = m.group(1) if m and "/static/" not in m.group(1) else None
+    return {"id": hashlib.md5(u.encode()).hexdigest()[:12], "t": titulo, "u": u, "d": desc[:220], "ts": ts,
+            "cat": cat, "src": fonte, "img": img if img and not re.search(r"/static/|logo-(globo|g1|ge|techtudo)", img) else None}
+
+
+def coletar_10anos(anterior=None):
+    alvo = dia_ha_10_anos()
+    if anterior and anterior.get("alvo") == alvo.isoformat():
+        print(f"há 10 anos: {alvo} já coletado")
+        return anterior
+    tz = timezone(-timedelta(hours=3))
+    ini = int(datetime(alvo.year, alvo.month, alvo.day, tzinfo=tz).timestamp() * 1000) - 86400_000  # véspera também
+    fim = int(datetime(alvo.year, alvo.month, alvo.day, tzinfo=tz).timestamp() * 1000) + 86400_000
+    janela = lambda t: (datetime(alvo.year, alvo.month, alvo.day) - timedelta(days=1)).strftime("%Y%m%d") <= t[:8] <= (datetime(alvo.year, alvo.month, alvo.day) + timedelta(days=2)).strftime("%Y%m%d")
+    candidatos, comeco = [], time.time()
+    for prefixo, fonte, padrao in SECOES_10:
+        if time.time() - comeco > 420:  # 7 min no máximo pedindo listas ao Archive
+            print("  ✗ há 10 anos: Archive lento, segue com o que deu")
+            break
+        pref = prefixo.format(a=alvo.year, m=f"{alvo.month:02d}")
+        try:
+            linhas = archive(f"https://web.archive.org/cdx/search/cdx?url={pref}&matchType=prefix&fl=original,timestamp"
+                             f"&collapse=urlkey&filter=statuscode:200&limit=3000").splitlines()
+        except Exception as e:  # uma seção fora não derruba as outras
+            print(f"  ✗ {fonte} {pref}: {e}")
+            continue
+        urls = []
+        for l in linhas:
+            partes = l.split()
+            if len(partes) == 2 and janela(partes[1]):  # 1ª vez que o Archive viu a matéria ≈ dia em que saiu
+                u = re.sub(r"^https?://([^/:]+)(:80)?/", r"https://\1/", partes[0]).split("?")[0]
+                urls.append(u)
+        urls = list(dict.fromkeys(urls))[:30]
+        candidatos += [(u, padrao, fonte) for u in urls]
+        print(f"  ✓ {fonte:10} {len(urls):3} candidatas  {pref}")
+    with cf.ThreadPoolExecutor(8) as ex:
+        itens = [i for i in ex.map(lambda c: materia_antiga(c[0], c[1], c[2], ini, fim), candidatos) if i]
+    # mesma notícia em duas seções vira uma só
+    finais, chaves = [], []
+    for i in sorted(itens, key=lambda x: (x["img"] is None, -x["ts"])):
+        pw = palavras(i["t"])
+        if any(mesma_noticia(pw, c) for c in chaves):
+            continue
+        finais.append(i)
+        chaves.append(pw)
+    finais.sort(key=lambda x: -x["ts"])
+    jogo_10 = None
+    try:  # o jogo do Timão daquela semana
+        ev = json.loads(baixar(f"{ESPN}/site/v2/sports/soccer/bra.1/teams/874/schedule?season={alvo.year}")[0]).get("events", [])
+        feitos = [e for e in ev if e["competitions"][0]["status"]["type"].get("completed")
+                  and ini - 3 * 86400_000 <= data_ts(e["date"].replace("Z", "+00:00")) < fim]
+        if feitos:
+            jogo_10 = jogo(sorted(feitos, key=lambda e: e["date"])[-1])
+    except Exception as e:
+        print(f"  ✗ jogo de 10 anos atrás: {e}")
+    print(f"há 10 anos ({alvo}): {len(finais)} notícias, jogo: {bool(jogo_10)}")
+    return {"alvo": alvo.isoformat(), "items": finais, "jogo": jogo_10}
+
+
 INPEACE = "https://admin.inpeaceapp.com"
 IGREJA_SITE = "https://lugardoencontro.inpeaceapp.com"
 
@@ -630,6 +750,14 @@ def main():
         (RAIZ / "igreja.json").write_text(json.dumps(ig, ensure_ascii=False, separators=(",", ":")))
     except Exception as e:  # se o app da igreja cair, fica a agenda anterior
         print(f"  ✗ igreja: {e}")
+    try:  # por último e com limite de tempo: o Internet Archive é lento e não pode atrasar o resto
+        h10 = RAIZ / "ha10.json"
+        anterior = json.loads(h10.read_text()) if h10.exists() else None
+        dez = coletar_10anos(anterior)
+        if dez["items"] or not anterior:
+            h10.write_text(json.dumps(dez, ensure_ascii=False, separators=(",", ":")))
+    except Exception as e:  # se o Archive cair, fica o dia anterior
+        print(f"  ✗ há 10 anos: {e}")
     print(f"notícias juntadas: {sum(len(i.get('alt', [])) for i in final)}")
     print("por editoria:", json.dumps(por_cat, ensure_ascii=False))
     print(f"com foto: {sum(1 for i in final if i['img'])}/{len(final)}")

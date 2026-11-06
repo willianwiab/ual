@@ -74,7 +74,7 @@ RUIM = ["odebrecht", "lava jato", "propinas?", "corrupção", "sangrent[oa]s?", 
         "sequestr*", "assalt*", "roub*", "furt*", "tráfico", "facç*", "pres[oa]s?", "prisão", "polícia*",
         "policia*", "feminicídio*", "violênci*", "abus*", "golpista*", "fraude*", "corrupç*", "investiga*",
         "denúncia*", "denunci*", "acident*", "atropel*", "suicíd*", "brig*", "agress*", "racis*", "injúria*",
-        "encontrad[oa]s? mort[oa]s?", "dívida*", "penhor*", "despejad*", "mort[oa] em casa", "bets?", "apostas?", "process[oa]*", "condenad*", "justiça", "bbb", "a fazenda", "fofoca*", "traição", "trai", "luto", "pena de morte",
+        "encontrad[oa]s? mort[oa]s?", "dívida*", "penhor*", "despejad*", "mort[oa] em casa", "bets?", "apostas?", "process[oa]*", "condenad*", "justiça", "bbb", "a fazenda", "fofoca*", "traição", "trai", "luto", "pena de morte", "devastad[oa]s?", "nazis*", "erótic*", "erotis*", "tem câncer", "com câncer", "devolução",
         # propaganda disfarçada de notícia
         "descontos?", "ofertas?", "menor preço", "promoç*", "cupo*", "black friday", "mercado livre", "amazon",
         "preço arrasador", "somente hoje", "imperdível"]
@@ -121,7 +121,13 @@ def tem(texto, palavras):
     return bool(_RX[k].search(texto))
 
 
+# jargão de futebol que não é notícia ruim ("mexe no ataque", "briga por posição")
+JARGAO_BOLA = re.compile(r"\b(no|o|do|seu|de|um) ataque\b|\bbrigas? (por|pel[oa]s?|na|no) (posição|posições|vaga|vagas|título|liderança|artilharia|ponta|topo|g-?\d+|z-?\d+|tabela|libertadores|sul-americana)", re.I)
+
+
 def classificar(titulo, desc, padrao):
+    if padrao in ("corinthians", "esportes"):
+        titulo = JARGAO_BOLA.sub(" ", titulo)
     t = titulo + " " + desc[:200]
     if tem(titulo, POLITICA) or tem(desc[:300], POLITICA[:40]) or tem(titulo, RUIM):
         return None
@@ -547,7 +553,13 @@ SECOES_10 = [
     ("g1.globo.com/natureza/noticia/{a}/{m}/", "g1", "ciencia"),
     ("g1.globo.com/pop-arte/noticia/{a}/{m}/", "g1", "pop"),
     ("g1.globo.com/pop-arte/cinema/noticia/{a}/{m}/", "g1", "cinema"),
+    ("g1.globo.com/musica/noticia/{a}/{m}/", "g1", "pop"),
+    ("globoesporte.globo.com/volei/noticia/{a}/{m}/", "ge", "esportes"),
+    ("globoesporte.globo.com/motor/formula-1/noticia/{a}/{m}/", "ge", "esportes"),
+    ("globoesporte.globo.com/tenis/noticia/{a}/{m}/", "ge", "esportes"),
+    ("globoesporte.globo.com/basquete/noticia/{a}/{m}/", "ge", "esportes"),
 ]
+SEMANA_10 = 6  # além do próprio dia, a semana que levou até ele (o Archive guarda pouco de um dia só)
 
 
 def archive(url):
@@ -599,19 +611,22 @@ def materia_antiga(u, padrao, fonte, ini, fim):
 
 def coletar_10anos(anterior=None):
     alvo = dia_ha_10_anos()
-    if anterior and anterior.get("alvo") == alvo.isoformat():
+    if anterior and anterior.get("alvo") == alvo.isoformat() and len(anterior.get("items", [])) >= 60:
         print(f"há 10 anos: {alvo} já coletado")
         return anterior
     tz = timezone(-timedelta(hours=3))
-    ini = int(datetime(alvo.year, alvo.month, alvo.day, tzinfo=tz).timestamp() * 1000) - 86400_000  # véspera também
+    ini = int(datetime(alvo.year, alvo.month, alvo.day, tzinfo=tz).timestamp() * 1000) - SEMANA_10 * 86400_000
     fim = int(datetime(alvo.year, alvo.month, alvo.day, tzinfo=tz).timestamp() * 1000) + 86400_000
-    janela = lambda t: (datetime(alvo.year, alvo.month, alvo.day) - timedelta(days=1)).strftime("%Y%m%d") <= t[:8] <= (datetime(alvo.year, alvo.month, alvo.day) + timedelta(days=2)).strftime("%Y%m%d")
+    # o Archive costuma ver a matéria uns dias depois de sair
+    janela = lambda t: (alvo - timedelta(days=SEMANA_10)).strftime("%Y%m%d") <= t[:8] <= (alvo + timedelta(days=4)).strftime("%Y%m%d")
+    meses = sorted({(d.year, d.month) for d in (alvo - timedelta(days=SEMANA_10), alvo)}, reverse=True)
     candidatos, comeco = [], time.time()
-    for prefixo, fonte, padrao in SECOES_10:
-        if time.time() - comeco > 420:  # 7 min no máximo pedindo listas ao Archive
+    # primeiro o mês do dia em todas as seções (variedade), depois o mês anterior
+    for (ano, mes), (prefixo, fonte, padrao) in [(m, s) for m in meses for s in SECOES_10]:
+        if time.time() - comeco > 540:  # 9 min no máximo pedindo listas ao Archive
             print("  ✗ há 10 anos: Archive lento, segue com o que deu")
             break
-        pref = prefixo.format(a=alvo.year, m=f"{alvo.month:02d}")
+        pref = prefixo.format(a=ano, m=f"{mes:02d}")
         try:
             linhas = archive(f"https://web.archive.org/cdx/search/cdx?url={pref}&matchType=prefix&fl=original,timestamp"
                              f"&collapse=urlkey&filter=statuscode:200&limit=3000").splitlines()
@@ -624,11 +639,15 @@ def coletar_10anos(anterior=None):
             if len(partes) == 2 and janela(partes[1]):  # 1ª vez que o Archive viu a matéria ≈ dia em que saiu
                 u = re.sub(r"^https?://([^/:]+)(:80)?/", r"https://\1/", partes[0]).split("?")[0]
                 urls.append(u)
-        urls = list(dict.fromkeys(urls))[:30]
+        urls = list(dict.fromkeys(urls))[:70]
         candidatos += [(u, padrao, fonte) for u in urls]
         print(f"  ✓ {fonte:10} {len(urls):3} candidatas  {pref}")
+    # o que a rodada anterior já achou e ainda cai na semana não precisa ser lido de novo
+    guardados = [i for i in (anterior or {}).get("items", []) if ini <= i["ts"] < fim]
+    ja = {i["u"] for i in guardados}
+    candidatos = [c for c in candidatos if c[0] not in ja]
     with cf.ThreadPoolExecutor(8) as ex:
-        itens = [i for i in ex.map(lambda c: materia_antiga(c[0], c[1], c[2], ini, fim), candidatos) if i]
+        itens = guardados + [i for i in ex.map(lambda c: materia_antiga(c[0], c[1], c[2], ini, fim), candidatos) if i]
     # mesma notícia em duas seções vira uma só
     finais, chaves = [], []
     for i in sorted(itens, key=lambda x: (x["img"] is None, -x["ts"])):
@@ -638,6 +657,7 @@ def coletar_10anos(anterior=None):
         finais.append(i)
         chaves.append(pw)
     finais.sort(key=lambda x: -x["ts"])
+    finais = finais[:150]
     jogo_10 = None
     try:  # o jogo do Timão daquela semana
         ev = json.loads(baixar(f"{ESPN}/site/v2/sports/soccer/bra.1/teams/874/schedule?season={alvo.year}")[0]).get("events", [])

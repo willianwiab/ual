@@ -1002,7 +1002,7 @@ function entrar10(){
   modo10=true;itensHoje=items;items=ha10.items.filter(i=>i.t&&i.u&&i.ts&&i.cat).sort((a,b)=>b.ts-a.ts);
   document.documentElement.classList.add("anos");$("#date").textContent=new Date(ha10.alvo+"T12:00:00-03:00").toLocaleDateString("pt-BR",{weekday:"short",day:"numeric",month:"short",year:"numeric"});$("#ano").textContent="Hoje";$("#ano").setAttribute("aria-label","Voltar para hoje");
   view="capa";history.replaceState(null,"",location.pathname);render();scrollTo({top:0});
-  $("#foot").textContent=`Notícias de ${dataLonga(ha10.alvo)}, como estavam no g1, no ge e no TechTudo (lista de matérias guardada pelo Internet Archive). Toque numa manchete para ler a matéria original.`;
+  $("#foot").textContent=`Notícias da semana que levou a ${dataLonga(ha10.alvo)}, como estavam no g1, no ge e no TechTudo (lista de matérias guardada pelo Internet Archive). Toque numa manchete para ler a matéria original.`;
 }
 function sair10(){
   modo10=false;items=itensHoje;document.documentElement.classList.remove("anos");pintaAno();
